@@ -1,141 +1,242 @@
-import gnc_library as gnc
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# written by: ME !! :)
+#
+# import libraries
+
+import gnc_core.gnc_library as gnc
 import numpy as np
 import pandas as pd
+import quaternionMath as qm
 import time
-from astropy import units as u
+import random
+import copy
 
+# import flight software
+import flight_software as fs
+
+# start simulation timer
 t_to_start = time.monotonic()
 
 
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# orbit parameters
+#
+# remember:
+#   sun-synchronous: a = 565km, i = 97.5, raan = 157.5, e = 0.0005
+#   ISS:             a = 417km, i = 51.6, raan = 77.6,  e = 0.0006
 
-a = 565
-e = 0.001
-i = 51.6 * 0 + 10
-raan = 90
-argp = 0
-nu = 0
+a = 565     # km
+e = 0.001   # unitless
+i = 97.5    # degrees
+raan = 90   # degrees
+argp = 0    # degrees
+nu = -179.9 # degrees
 
-Ixx = 10
-Iyy = 10
-Izz = 10
-
-satellite_area = 1.1
-
-
-
+# define satellite orbit given parameters
 satellite_orbit = [(a+6378.1)*10**3, e, i, raan, argp, nu]
-moment_of_inertia = [Ixx, Iyy, Izz]
-satellite_mass = 25
-q_initial = gnc.normalize(np.array([1, 2, 3, 1]))
-w_initial = np.array([0.001, 0.001, 0.001])
 
 
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# satellite physical parameters
+#
+#                x                               z
+#           ___________               _________________________                  
+#          \           \             \                        \
+#          \           \    y        \                        \    y 
+#          \           \             \                        \
+#          \___________\             \________________________\
+#
+#
+#                x
+#           ___________          
+#          \           \                   
+#          \           \                 
+#          \           \                 
+#          \           \    z             
+#          \           \                
+#          \           \                                            
+#          \           \    
+#          \___________\ 
+#
+#           
+
+# satellite dimensions ( see above )
+satellite_x = 10 * 10**-2 # m
+satellite_y = 10 * 10**-2 # m
+satellite_z = 20 * 10**-2 # m
+
+# satellite mass
+satellite_mass = 1.5 # kg
+
+# average area, computed using the min. and max areas
+satellite_area = 0.5 * (satellite_x**2 + satellite_z**2)    # m^2 
+
+# moments of inertia ( calculated using uniform assumption )
+Ixx = (1/12) * satellite_mass * (satellite_y**2 + satellite_z**2) 
+Iyy = (1/12) * satellite_mass * (satellite_x**2 + satellite_z**2)
+Izz = (1/12) * satellite_mass * (satellite_x**2 + satellite_y**2)
+moment_of_inertia = [Ixx, Iyy, Izz] # kg-m^2
+
+
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# simulation parameters
+
+# initial quaternion ( random )
+q_initial = qm.normalize(np.array([random.random(), random.random(), random.random(), random.random()]))
+
+# initial angular rate ( rad/s )
+w_initial = np.array([0.06, 0.01, -0.06])
+
+# build the state handler for the simulation
 state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
-                           satellite_area,  q_initial, w_initial)
+                           satellite_area, q_initial, w_initial)
 
 
+# timestep to run physics simulation
+physicsHz = 20            # Hz
 
-kp = 1
-kd = 10
-sigma = 0.05
-order = 3
+# timestep to run flight software
+flightSoftwareHz = 5      # Hz
 
-p2Controller = gnc.p2Controller(kp, kd)
-smcController = gnc.smcController(kp, kd, sigma, order)
-
-max_wheel_speed = 100
-wheel_moi = 0.01 / max_wheel_speed
-max_wheel_torque = 0.01
-min_wheel_torque = 0
-reactionWheelAssembly = gnc.reactionWheelAssembly(wheel_moi, max_wheel_speed, max_wheel_torque, min_wheel_torque)
+# total simulation time
+simTime = 0.5*state.orbit.period.value   # s
 
 
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# reaction wheel parameters
+#
+# https://www.rocketlabusa.com/assets/Uploads/10-mNms-RW-0.01-Data-Sheet.pdf
+# power consumption at max speed / max torque: 1.05 W
+# power consumption at max speed / no torque: 0.25 W
+# power consumption at no speed / no torque: 0.11 W
 
-thrust_magnitude = 5 * 10**1
+max_wheel_speed = 6500*0.1047198        # rad/s
+wheel_moi = 0.018 / max_wheel_speed     # Nms^2 or kgm^2
+max_wheel_torque = 1*10**-3             # Nm
+min_wheel_speed = 0.1*0.1047198         # rad/s
 
-ctl = [0, 0, 0]
-controlTorque = [0, 0, 0]
-disturbanceTorque = [0, 0, 0]
-thrust = [0, 0, 0]
-disturbanceForce = 0
+power_consumption_idle = 0.11        # W
+power_consumption_active = 1.05      # W
+
+reactionWheelAssembly = gnc.reactionWheelAssembly(wheel_moi, max_wheel_speed, max_wheel_torque, min_wheel_speed)
 
 
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# magnetorquer parameters
+#
+# Jagsat-specific hardware, maybe link to ICD?
+
+n_turns = 2*40                  # unitless (times two to reflect 2 magnetorquers)
+length = 20 * 10**-2            # meters
+width = 10 * 10**-2             # meters
+max_current = 40 * 10 ** -3     # Amps
+
+power_consumption_idle = 0               # W
+power_consumption_active = 5*max_current # W
+
+magnetorquerAssembly = gnc.magnetorquerAssembly(n_turns, length, width, max_current)
+
+
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# thruster parameters
+#
+# https://www.enpulsion.com/order/enpulsion-nano/
+
+thrust_magnitude = 330 * 10**-6 # N
+propellantd_mass = 220 * 10**-3 # kg
+
+power_consumption_idle = 8      # W
+power_consumption_active = 40   # W
+
+
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# initialize simulation variables
+
+controlTorque = [0, 0, 0]       # initial control torque
+disturbanceTorque = [0, 0, 0]   # initial disturbance torque
+thrust = [0, 0, 0]              # initial thrust
+disturbanceForce = 0            # initial disturbance force (unused)
+
+# initialize dataframe to store results
 df = pd.DataFrame()
 
-
-physicsHz = 50            # Hz
-flightSoftwareHz = 5        # Hz
-
+# initialize counter and time to zero
 counter = 0
-t = 0                                    # s
-simTime = 0.35*state.orbit.period.value    # s
+t = 0 
 
-ff = 0
 
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# flight software begin {#467, 5}
+# begin flight software and update user variables if any
+
+scheduler = fs.schedulerApp()
+scheduler._update_user_variables(bDot_gain=10**-3, smc_kp=0.001, smc_kd=0.01)
+
+
+# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# begin simulation
+
+print('\n')
 while t < simTime:
-    
-    disturbanceTorque = (10**-9)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)])
+    # add random disturbance torques
+    disturbanceTorque = (10**-9)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)]) # N
+
+    # propagate attitude one timestep
     state.propagateAttitude(controlTorque, disturbanceTorque, (1/physicsHz))
-    # state.propagatePosition(thrust, disturbanceForce, (1/physicsHz))
+
+    # propagate posiition one timestep
+    state.propagatePosition(thrust, disturbanceForce, (1/physicsHz))
+
     
-    '''
-    v_direction = np.array(gnc.normalize( (state.orbit.v << u.meter / u.second).value ))
-    r_direction = np.array(gnc.normalize( (state.orbit.r << u.meter).value ))
-    
-    limit = 500
-    if ((state.orbit.r[2] << u.km).value > - limit and (state.orbit.r[2] << u.km).value < + limit) and ff == 0:
-        h_direction = np.cross(v_direction, r_direction)
-        unitvec = gnc.normalize( 0.0*v_direction + 1.0*h_direction )
-        thrust = thrust_magnitude * np.array( unitvec )
-        
-    elif ((state.orbit.r[2] << u.km).value > - limit and (state.orbit.r[2] << u.km).value < + limit) and ff == 1:
-        h_direction = -np.cross(v_direction, r_direction)
-        unitvec = gnc.normalize( 0.0*v_direction + 1.0*h_direction )
-        thrust = thrust_magnitude * np.array( unitvec )
-    
-    elif (state.orbit.r[2] << u.km).value > + limit or (state.orbit.r[2] << u.km).value < - limit:
-        unitvec = gnc.normalize( 1.0*v_direction + 0.0*h_direction )
-        thrust = (thrust_magnitude/50) * np.array( unitvec )
-    
-    else:
-        thrust = [0, 0, 0]
-        
-    
-    if (state.orbit.r[2] << u.km).value > + limit:
-        ff = 0
-    elif (state.orbit.r[2] << u.km).value < - limit:
-        ff = 1
-    '''
-    
-    
-    
-    
+    # if this timestep is a software timestep, iterate flight software once
     if counter % int(physicsHz / flightSoftwareHz) == 0:
+
+        # flight software loop {#467, 13}
         
-        p2Controller.input_function(state.angularRate, state.quaternion)
-        # smcController.input_function(state.angularRate, state.quaternion)
-        
-        ctl = p2Controller.output_function( [0, 0, 0, 1] )
-        # ctl = smcController.output_function( [0, 0, 0, 1] )
+        # expose flight software to current physical state
+        scheduler._physics_to_harware_int(state)
+
+        # advance flight software one timestep
+        scheduler._iterate()
+
+        # write commands to reaction wheels
+        reactionWheelAssembly.commandReactionWheels(scheduler.rw_command)
+
+        # write commands to magnetorquers
+        magnetorquerAssembly.commandMangetorquers(scheduler.mt_command)
     
+
+
+    # allow reaction wheels to influence physical state
+    reactionWheelAssembly.actuateReactionWheels(1/physicsHz)
+
+    # allow magnetorquers to influence physical state
+    magnetorquerAssembly.actuateMagnetorquers(state)
     
+    # consolidate physical influences
+    controlTorque = copy.deepcopy(reactionWheelAssembly.wheel_torques) + copy.deepcopy(magnetorquerAssembly.torque)
+
+
+    # append variables to dataframe to monitor results
+    df = gnc.appendDataFrame(df, state, t, scheduler.q_error, reactionWheelAssembly)
     
-    reactionWheelAssembly.actuateReactionWheels(ctl, (1/physicsHz))
-    
-    
-    controlTorque = reactionWheelAssembly.wheel_torques
-    
-    df = gnc.appendDataFrame(df, state, t, p2Controller.quaternion_error)
-    
+    # update user about simulation status
     if counter%1000 == 0:
-        print(str(int(100*t/simTime)) + '% complete')
+        print('\r', str(int(100*t/simTime)) + '% complete -- (w is ' + str(round(qm.magnitude(state.angularRate), 4)) + ')        ' , end='')
     
+    # advance counter and simulation time
     counter += 1
     t += (1/physicsHz)
 
+
+# when simulation is finished, stop the timer
 t_to_finish = time.monotonic()
 
-# gnc.plot_orbit(df)
+# generate plots for user
 gnc.plot_quaternion_error(df)
 
-print('simulation took ' + str(round((t_to_finish-t_to_start) / 60, 1)) + ' minutes')
+# display time to finish simulation
+print('\nsimulation took ' + str(round((t_to_finish-t_to_start) / 60, 1)) + ' minutes')
+
+# write results to csv for future analysis
+df.to_csv('__out/simulation_results.txt')

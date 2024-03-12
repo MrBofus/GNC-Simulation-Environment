@@ -159,7 +159,6 @@ class schedulerApp():
 
     # interface functions {#121, 15}
     def _physics_to_harware_int(self, state):
-        self.returns = None
         self._s = state
         self.systemClock += 1
 

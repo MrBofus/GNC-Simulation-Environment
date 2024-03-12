@@ -14,65 +14,10 @@ def sign(val):
     elif val < 0: return -1
     else: return 1
 
-'''
-class p2Controller():
-    # https://ltu.diva-portal.org/smash/get/diva2:1010947/FULLTEXT01.pdf
-    def __init__(self, kp, kd):
-        self.kp = kp
-        self.kd = kd
-    
-    def input_function(self, angularRate, quaternion):
-        self.angularRate = angularRate
-        self.quaternion = quaternion
-    
-    def output_function(self, setpoint):
-        quaternion, angularRate = copy.deepcopy(self.quaternion), copy.deepcopy(self.angularRate)
-        # quaternion_error = quaternionMultiply( quaternion, conjugate(setpoint) )
-        quaternion_error = qm.quaternionDifference(quaternion, setpoint)
-        
-        controlTorque = []
-        for i in range(3):
-            u = ( self.kp * quaternion_error[i] * sign(quaternion_error[3]) ) + ( self.kd * angularRate[i] )
-            controlTorque.append(u)
-
-        self.quaternion_error = quaternion_error
-        self.controlTorque = np.array( controlTorque )
-        
-        return self.controlTorque
-
-
-
-class smcController():
-    def __init__(self, kp, kd, sigma, order):
-        self.kp = kp
-        self.kd = kd
-        
-        self.sigma = sigma
-        self.order = order
-    
-    def input_function(self, angularRate, quaternion):
-        self.angularRate = angularRate
-        self.quaternion = quaternion
-    
-    def output_function(self, setpoint):
-        self.quaternion_error = qm.quaternionDifference(self.quaternion, setpoint)
-        
-        controlTorque = []
-        for i in range(3):
-            if abs(self.quaternion_error[i]) >= self.sigma:
-                u = self.kp * (self.quaternion_error[i] ** self.order) * sign(self.quaternion_error[3]) + self.kd * self.angularRate[i]
-            
-            else:
-                u = self.kp * self.quaternion_error[i] * sign(self.quaternion_error[3]) + self.kd * self.angularRate[i]
-                
-            controlTorque.append(u)
-            
-        self.controlTorque = np.array( controlTorque )
-        
-        return self.controlTorque
-'''
 
 def p2controller(angularRate, quaternion, setpoint, kp, kd):
+    # https://ltu.diva-portal.org/smash/get/diva2:1010947/FULLTEXT01.
+    
     quaternion_error = qm.quaternionDifference(quaternion, setpoint)
         
     controlTorque = []

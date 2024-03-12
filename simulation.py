@@ -171,7 +171,7 @@ t = 0
 # begin flight software and update user variables if any
 
 scheduler = fs.schedulerApp()
-scheduler._update_user_variables(bDot_gain=10**-3, smc_kp=0.001, smc_kd=0.01)
+scheduler._update_user_variables(bDot_gain=10**-2, smc_kp=0.001, smc_kd=0.01)
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -180,7 +180,7 @@ scheduler._update_user_variables(bDot_gain=10**-3, smc_kp=0.001, smc_kd=0.01)
 print('\n')
 while t < simTime:
     # add random disturbance torques
-    disturbanceTorque = (10**-9)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)]) # N
+    disturbanceTorque = (10**-7)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)]) # N
 
     # propagate attitude one timestep
     state.propagateAttitude(controlTorque, disturbanceTorque, (1/physicsHz))

@@ -82,6 +82,11 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
                       [translation[1]-scale, translation[1]+scale], 
                       [translation[2]-scale, translation[2]+scale])
     
+    # unitvec = -1*np.array(translation)/np.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2)
+    # az = (180/np.pi)*np.arctan2( unitvec[0], -unitvec[2] )
+    # el = (180/np.pi)*np.arcsin( unitvec[1] )
+    # ax.view_init(elev=el+80, azim=az+80, roll=97)
+
     ax.set_axis_off()
     ax.set_facecolor('black') 
 
@@ -109,7 +114,7 @@ def runVisualizer(qlist: list, rlist:list, eventlist: list, pause_amount: float,
     figure = plt.figure()
     # figure.set_facecolor('black')
     axes = figure.add_subplot(projection='3d')
-    axes.view_init(elev=-10, azim=-92, roll=0)
+    axes.view_init(elev=-10, azim=-92, roll=180)
 
     # Load the STL files and add the vectors to the plot
     sat_mesh = mesh.Mesh.from_file('_resources/satellite_model_deployed.stl')
@@ -135,8 +140,8 @@ def temp(df):
                      df['wx'].iloc[i], df['wy'].iloc[i], df['wz'].iloc[i],
                      length=25 )
         axes.quiver( 0, 0, 0,
-                     df['Mx'].iloc[i], df['My'].iloc[i], df['Mz'].iloc[i],
-                     length=25, color='r' )
+                     -df['Mx'].iloc[i], -df['My'].iloc[i], -df['Mz'].iloc[i],
+                     length=10**5, color='r' )
         
         axes.auto_scale_xyz([-5, 5], 
                             [-5, 5], 
@@ -160,4 +165,5 @@ if __name__ == "__main__":
         rlist.append(np.array([ df['x'].iloc[i], df['y'].iloc[i], df['z'].iloc[i] ]))
         vlist.append(np.array([ df['vx'].iloc[i], df['vy'].iloc[i], df['vz'].iloc[i] ]))
 
-    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)
+    # runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)
+    temp(df)

@@ -30,7 +30,7 @@ e = 0.001   # unitless
 i = 97.5    # degrees
 raan = 90   # degrees
 argp = 0    # degrees
-nu = -179.9 # degrees
+nu = 0      # degrees
 
 # define satellite orbit given parameters
 satellite_orbit = [(a+6378.1)*10**3, e, i, raan, argp, nu]
@@ -79,6 +79,7 @@ moment_of_inertia = [Ixx, Iyy, Izz] # kg-m^2
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
+# # simulation parameters {#f91, 22}
 # simulation parameters
 
 # initial quaternion ( random )
@@ -99,7 +100,7 @@ physicsHz = 20            # Hz
 flightSoftwareHz = 5      # Hz
 
 # total simulation time
-simTime = 0.5*state.orbit.period.value   # s
+simTime = 1.0*state.orbit.period.value   # s
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #

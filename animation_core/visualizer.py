@@ -66,9 +66,11 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
     rgbMesh = rl.renderLighting(mesh_.meshlist['earth_mesh'])
     earth_obj.set_facecolor(rgbMesh)
 
+    '''
     ax.quiver( translation[0], translation[1], translation[2],
                vvec[0], vvec[1], vvec[2],
                length=25 )
+    '''
 
     # add the render to the matplotlib figure
     ax.add_collection3d( deployed_obj )
@@ -158,4 +160,4 @@ if __name__ == "__main__":
         rlist.append(np.array([ df['x'].iloc[i], df['y'].iloc[i], df['z'].iloc[i] ]))
         vlist.append(np.array([ df['vx'].iloc[i], df['vy'].iloc[i], df['vz'].iloc[i] ]))
 
-    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=10)
+    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)

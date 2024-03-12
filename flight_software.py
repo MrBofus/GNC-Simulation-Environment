@@ -105,6 +105,9 @@ def bDotController(angularRate, bField, gain):
 
 
 
+def printout(str):
+    print('\033[0;32m\tfrom flight_software.schedulerApp():\n' + str + '\033[0m')
+
 
 
 class schedulerApp():
@@ -126,7 +129,7 @@ class schedulerApp():
         self.systemClock = 0
 
 
-    # user-defined variables {#121, 29}
+    # user-defined variables {#121, 31}
     def _update_user_variables(self, **kwargs):
         defaults = {
                     'bDot_gain': 0.1,
@@ -149,15 +152,17 @@ class schedulerApp():
                     }
         
         self._p = defaults
+        outstr = ''
         for arg, value in kwargs.items():
             if arg in defaults:
                 self._p[arg]=value
-                print('\t--- updated: ', arg, ' --> ', value)
+                outstr += '\t--- updated: ' + arg + ' --> ' + str(value) + '\n'
         
-        print('\n', self._p)
+        outstr += '\n' + str(self._p)
+        printout(outstr)
 
 
-    # interface functions {#121, 15}
+    # interface functions {#121, 14}
     def _physics_to_harware_int(self, state):
         self._s = state
         self.systemClock += 1
@@ -184,7 +189,7 @@ class schedulerApp():
         pass
 
 
-    # flight apps {#211, 44}
+    # flight apps {#211, 45}
     def _run_navigation(self):
         wvec = rg.pull_gyro(self._s, noise=self._p['rg_noise'])
         qvec = st.pull_star_tracker(self._s, noise=self._p['st_noise'])
@@ -215,14 +220,12 @@ class schedulerApp():
         elif self.mode == 'dataCollection':
             mt_command = [0, 0, 0]
 
-            rvec = qm.normalize(self.m.measurements['rvec'])
-            vvec = qm.normalize(self.m.measurements['vvec'])
-            hvec = np.cross(rvec, vvec)
+            rvec = np.array( qm.normalize(self.m.measurements['rvec']) )
+            vvec = np.array( qm.normalize(self.m.measurements['vvec']) )
+            hvec = np.array( np.cross(rvec, vvec) )
 
-            nadir_direction = qm.dcm_to_quaternion(np.array([hvec, rvec, vvec]))
-            
-            if self.systemClock % 1000 == 0:
-                print(nadir_direction)
+            # nadir_direction = qm.dcm_to_quaternion( np.array([hvec, -vvec, rvec]) )
+            nadir_direction = qm.dcm_to_quaternion( np.array([hvec, vvec, -rvec]) )
 
             q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
                                                         self.m.measurements['quaternion'], nadir_direction, 

@@ -110,8 +110,8 @@ def runVisualizer(qlist: list, rlist:list, eventlist: list, pause_amount: float,
     axes.view_init(elev=-10, azim=-92, roll=0)
 
     # Load the STL files and add the vectors to the plot
-    sat_mesh = mesh.Mesh.from_file('__resources/satellite_model_deployed.stl')
-    earth_mesh = mesh.Mesh.from_file('__resources/earth_model.stl')
+    sat_mesh = mesh.Mesh.from_file('_resources/satellite_model_deployed.stl')
+    earth_mesh = mesh.Mesh.from_file('_resources/earth_model.stl')
 
     meshhandler = mesh_organizer_(deployed_mesh=sat_mesh, 
                                   earth_mesh = earth_mesh)
@@ -146,7 +146,7 @@ def temp(df):
 if __name__ == "__main__":
     import pandas as pd
 
-    df = pd.read_csv( '__out/simulation_results.txt' )
+    df = pd.read_csv( '_out/simulation_results.txt' )
     
     qlist = []
     rlist = []

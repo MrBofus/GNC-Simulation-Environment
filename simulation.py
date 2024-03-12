@@ -239,4 +239,4 @@ gnc.plot_quaternion_error(df)
 print('\nsimulation took ' + str(round((t_to_finish-t_to_start) / 60, 1)) + ' minutes')
 
 # write results to csv for future analysis
-df.to_csv('__out/simulation_results.txt')
+df.to_csv('_out/simulation_results.txt')

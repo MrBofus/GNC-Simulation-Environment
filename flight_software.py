@@ -134,7 +134,7 @@ class schedulerApp():
         pass
 
 
-    # flight apps {#211, 45}
+    # flight apps {#211, 48}
     def _run_navigation(self):
         wvec = rg.pull_gyro(self._s, noise=self._p['rg_noise'])
         qvec = st.pull_star_tracker(self._s, noise=self._p['st_noise'])
@@ -168,15 +168,29 @@ class schedulerApp():
             rvec = np.array( qm.normalize(self.m.measurements['rvec']) )
             vvec = np.array( qm.normalize(self.m.measurements['vvec']) )
             hvec = np.array( np.cross(rvec, vvec) )
-
-            # nadir_direction = qm.dcm_to_quaternion( np.array([hvec, -vvec, rvec]) )
-            nadir_direction = qm.dcm_to_quaternion( np.array([hvec, vvec, -rvec]) )
-
-            q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
-                                                        self.m.measurements['quaternion'], nadir_direction, 
-                                                        self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
             
-            self._write_command_to_magnetorquer(mt_command)
-            self._write_command_to_reactionWheel(rw_command)
-            self._write_variables_to_state(self.mode, q_error)
-            return None
+            cmd = 'nadir'
+            if cmd == 'nadir':
+                # nadir_direction = qm.dcm_to_quaternion( np.array([hvec, -vvec, rvec]) )
+                nadir_direction = qm.dcm_to_quaternion( np.array([hvec, vvec, -rvec]) )
+
+                q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
+                                                            self.m.measurements['quaternion'], nadir_direction, 
+                                                            self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
+                
+                self._write_command_to_magnetorquer(mt_command)
+                self._write_command_to_reactionWheel(rw_command)
+                self._write_variables_to_state(self.mode, q_error)
+                return None
+                
+            elif cmd == 'prograde':
+                prograde_direction = qm.dcm_to_quaternion( np.array([hvec, rvec, vvec]) )
+
+                q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
+                                                            self.m.measurements['quaternion'], prograde_direction, 
+                                                            self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
+                
+                self._write_command_to_magnetorquer(mt_command)
+                self._write_command_to_reactionWheel(rw_command)
+                self._write_variables_to_state(self.mode, q_error)
+                return None

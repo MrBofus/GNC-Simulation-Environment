@@ -82,10 +82,18 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
                       [translation[1]-scale, translation[1]+scale], 
                       [translation[2]-scale, translation[2]+scale])
     
+    # up: +z
+    # forward: +x
+
+    unitvec = 1*np.array(translation)/np.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2)
+    az = (180/np.pi)*np.arctan2( unitvec[1], unitvec[0] )
+    el = (180/np.pi)*np.arcsin( unitvec[2] )
+    ax.view_init(elev=el+5, azim=az+10, roll=180)
+
     # unitvec = -1*np.array(translation)/np.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2)
-    # az = (180/np.pi)*np.arctan2( unitvec[0], -unitvec[2] )
-    # el = (180/np.pi)*np.arcsin( unitvec[1] )
-    # ax.view_init(elev=el+80, azim=az+80, roll=97)
+    # azimuth = np.degrees( np.arctan(unitvec[0]/unitvec[1]) )
+    # elevation = np.degrees( np.arctan2(unitvec[2],unitvec[1]) )
+    # ax.view_init(elev=elevation, azim=azimuth, roll=0)
 
     ax.set_axis_off()
     ax.set_facecolor('black') 
@@ -165,5 +173,4 @@ if __name__ == "__main__":
         rlist.append(np.array([ df['x'].iloc[i], df['y'].iloc[i], df['z'].iloc[i] ]))
         vlist.append(np.array([ df['vx'].iloc[i], df['vy'].iloc[i], df['vz'].iloc[i] ]))
 
-    # runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)
-    temp(df)
+    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)

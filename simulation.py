@@ -79,14 +79,14 @@ moment_of_inertia = [Ixx, Iyy, Izz] # kg-m^2
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
-# # simulation parameters {#f91, 22}
+# simulation parameters {#f91, 22}
 # simulation parameters
 
 # initial quaternion ( random )
 q_initial = qm.normalize(np.array([random.random(), random.random(), random.random(), random.random()]))
 
 # initial angular rate ( rad/s )
-w_initial = np.array([0.06, 0.01, -0.06])
+w_initial = np.array([0.16, 0.08, -0.16])
 
 # build the state handler for the simulation
 state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
@@ -171,7 +171,7 @@ t = 0
 # begin flight software and update user variables if any
 
 scheduler = fs.schedulerApp()
-scheduler._update_user_variables(bDot_gain=10**-2, smc_kp=0.001, smc_kd=0.01)
+scheduler._update_user_variables(bDot_gain=10**-2, smc_kp=0.003, smc_kd=0.015)
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -192,7 +192,7 @@ while t < simTime:
     # if this timestep is a software timestep, iterate flight software once
     if counter % int(physicsHz / flightSoftwareHz) == 0:
 
-        # flight software loop {#467, 13}
+        # flight software loop {#467, 7}
         
         # expose flight software to current physical state
         scheduler._physics_to_harware_int(state)
@@ -200,17 +200,15 @@ while t < simTime:
         # advance flight software one timestep
         scheduler._iterate()
 
+        
         # write commands to reaction wheels
         reactionWheelAssembly.commandReactionWheels(scheduler.rw_command)
-
         # write commands to magnetorquers
         magnetorquerAssembly.commandMangetorquers(scheduler.mt_command)
     
 
-
     # allow reaction wheels to influence physical state
     reactionWheelAssembly.actuateReactionWheels(1/physicsHz)
-
     # allow magnetorquers to influence physical state
     magnetorquerAssembly.actuateMagnetorquers(state)
     

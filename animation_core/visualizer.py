@@ -10,7 +10,7 @@ import numpy as np
 import copy
 import renderLighting as rl
 import sys
-sys.path.append("C:/Users/Owner/OneDrive/Documents/GitHub/GNC-Simulation-Environment/")
+sys.path.append("../GNC-Simulation-Environment")
 import quaternionMath as qm
 
 
@@ -53,7 +53,7 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
     tempmesh.translate(translation)
     deployed_vecs = tempmesh.vectors
 
-    earth_vecs =    100*mesh_.meshlist['earth_mesh'].vectors
+    earth_vecs = 150*mesh_.meshlist['earth_mesh'].vectors
 
 
     # render the stl as a matplotlib object
@@ -81,23 +81,17 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
 
 
     # scale the graph
-    # ax.auto_scale_xyz([translation[0]-scale, translation[0]+scale], 
-    #                   [translation[1]-scale, translation[1]+scale], 
-    #                   [translation[2]-scale, translation[2]+scale])
-    ax.set_xlim([-1000, 1000])
-    ax.set_ylim([-1000, 1000])
-    ax.set_zlim([-1000, 1000])
+    ax.auto_scale_xyz([translation[0]-scale, translation[0]+scale], 
+                      [translation[1]-scale, translation[1]+scale], 
+                      [translation[2]-scale, translation[2]+scale])
     
     # https://stackoverflow.com/questions/11165863/how-to-calculate-azimuth-elevation-of-objects-relative-to-camera-using-cam-qua
     # note: up: +z, forward: +x
-
     unitvec = -1*np.array( qm.normalize(translation) )
-    az = (180/np.pi)*np.arctan2( unitvec[1], unitvec[0] )
-    el = (180/np.pi)*np.arcsin( unitvec[2] )
-    # ax.view_init(elev=el, azim=az+0)
-    ax.azim = az
-    ax.elev = el
-    ax.roll = 0
+    ax.azim = (180/np.pi)*np.arctan2( unitvec[1], unitvec[0] )
+    ax.elev = (180/np.pi)*np.arcsin( unitvec[2] )
+
+    ax.elev += 0
 
     '''
     if translation[0] > 0:
@@ -112,6 +106,7 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
         else:
             ax.view_init(elev=50, azim=92, roll=180)
     '''
+    
     ax.set_axis_off()
     ax.set_facecolor('black') 
 
@@ -190,4 +185,4 @@ if __name__ == "__main__":
         rlist.append(np.array([ df['x'].iloc[i], df['y'].iloc[i], df['z'].iloc[i] ]))
         vlist.append(np.array([ df['vx'].iloc[i], df['vy'].iloc[i], df['vz'].iloc[i] ]))
 
-    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)
+    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=10)

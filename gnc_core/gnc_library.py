@@ -125,7 +125,6 @@ def ECI_to_ECEF(r, t):
     
     return lon, lat, alt
 
-
     
 
 def appendDataFrame(df, state, t, error, rwheel):

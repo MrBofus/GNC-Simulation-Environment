@@ -49,6 +49,19 @@ def bDotController(angularRate, bField, gain):
     return -gain*np.cross(angularRate, bField)
 
 
+def ground_target_guidance(measurements, mode):
+    rvec = np.array( qm.normalize(measurements['rvec']) )
+    vvec = np.array( qm.normalize(measurements['vvec']) )
+    hvec = np.array( np.cross(rvec, vvec) )
+    
+    if mode == 'nadir':
+        return qm.dcm_to_quaternion( np.array([hvec, vvec, -rvec]) )
+    
+    elif mode == 'prograde':
+        return qm.dcm_to_quaternion( np.array([hvec, rvec, vvec]) )
+
+
+
 
 def printout(str):
     print('\033[0;32m\tfrom flight_software.schedulerApp():\n' + str + '\033[0m')
@@ -164,33 +177,21 @@ class schedulerApp():
         
         elif self.mode == 'dataCollection':
             mt_command = [0, 0, 0]
-
-            rvec = np.array( qm.normalize(self.m.measurements['rvec']) )
-            vvec = np.array( qm.normalize(self.m.measurements['vvec']) )
-            hvec = np.array( np.cross(rvec, vvec) )
             
             cmd = 'nadir'
+            
             if cmd == 'nadir':
-                # nadir_direction = qm.dcm_to_quaternion( np.array([hvec, -vvec, rvec]) )
-                nadir_direction = qm.dcm_to_quaternion( np.array([hvec, vvec, -rvec]) )
-
-                q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
-                                                            self.m.measurements['quaternion'], nadir_direction, 
-                                                            self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
-                
-                self._write_command_to_magnetorquer(mt_command)
-                self._write_command_to_reactionWheel(rw_command)
-                self._write_variables_to_state(self.mode, q_error)
-                return None
-                
+                q_setpoint = ground_target_guidance(self.m.measurements, 'nadir')
+   
             elif cmd == 'prograde':
-                prograde_direction = qm.dcm_to_quaternion( np.array([hvec, rvec, vvec]) )
+                q_setpoint = ground_target_guidance(self.m.measurements, 'prograde')
 
-                q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
-                                                            self.m.measurements['quaternion'], prograde_direction, 
-                                                            self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
-                
-                self._write_command_to_magnetorquer(mt_command)
-                self._write_command_to_reactionWheel(rw_command)
-                self._write_variables_to_state(self.mode, q_error)
-                return None
+
+            q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
+                                                        self.m.measurements['quaternion'], q_setpoint, 
+                                                        self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
+            
+            self._write_command_to_magnetorquer(mt_command)
+            self._write_command_to_reactionWheel(rw_command)
+            self._write_variables_to_state(self.mode, q_error)
+            return None

@@ -61,3 +61,15 @@ print(el*180/np.pi)
 zvec = np.array([0, 0, 1])
 angle = np.arccos(np.dot(zvec, vvec)/(np.sqrt(zvec[0]**2 + zvec[1]**2 + zvec[2]**2)*np.sqrt(vvec[0]**2 + vvec[1]**2 + vvec[2]**2)))
 print(angle*180/np.pi)
+
+
+phi = 10 * 4.8481*10**-6
+theta = 10 * 4.8481*10**-6
+psi = 100 * 4.8481*10**-6
+
+q1 = np.cos(phi/2)*np.cos(theta/2)*np.cos(psi/2) + np.sin(phi/2)*np.sin(theta/2)*np.sin(psi/2)
+q2 = np.sin(phi/2)*np.cos(theta/2)*np.cos(psi/2) - np.cos(phi/2)*np.sin(theta/2)*np.sin(psi/2)
+q3 = np.cos(phi/2)*np.sin(theta/2)*np.cos(psi/2) + np.sin(phi/2)*np.cos(theta/2)*np.sin(psi/2)
+q4 = np.cos(phi/2)*np.cos(theta/2)*np.sin(psi/2) - np.sin(phi/2)*np.sin(theta/2)*np.cos(psi/2)
+
+print(q1, q2, q3, q4)

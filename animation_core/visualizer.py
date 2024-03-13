@@ -4,12 +4,15 @@
 
 from stl import mesh
 from mpl_toolkits import mplot3d
-from matplotlib.colors import LightSource
 import matplotlib.pyplot as plt
 import math
 import numpy as np
 import copy
 import renderLighting as rl
+import sys
+sys.path.append("C:/Users/Owner/OneDrive/Documents/GitHub/GNC-Simulation-Environment/")
+import quaternionMath as qm
+
 
 # rotate stl mesh given a quaternion rotation
 def rotateGivenQuaternion(np_mesh, quaternion):
@@ -78,23 +81,37 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
 
 
     # scale the graph
-    ax.auto_scale_xyz([translation[0]-scale, translation[0]+scale], 
-                      [translation[1]-scale, translation[1]+scale], 
-                      [translation[2]-scale, translation[2]+scale])
+    # ax.auto_scale_xyz([translation[0]-scale, translation[0]+scale], 
+    #                   [translation[1]-scale, translation[1]+scale], 
+    #                   [translation[2]-scale, translation[2]+scale])
+    ax.set_xlim([-1000, 1000])
+    ax.set_ylim([-1000, 1000])
+    ax.set_zlim([-1000, 1000])
     
-    # up: +z
-    # forward: +x
+    # https://stackoverflow.com/questions/11165863/how-to-calculate-azimuth-elevation-of-objects-relative-to-camera-using-cam-qua
+    # note: up: +z, forward: +x
 
-    unitvec = 1*np.array(translation)/np.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2)
+    unitvec = -1*np.array( qm.normalize(translation) )
     az = (180/np.pi)*np.arctan2( unitvec[1], unitvec[0] )
     el = (180/np.pi)*np.arcsin( unitvec[2] )
-    ax.view_init(elev=el+5, azim=az+10, roll=180)
+    # ax.view_init(elev=el, azim=az+0)
+    ax.azim = az
+    ax.elev = el
+    ax.roll = 0
 
-    # unitvec = -1*np.array(translation)/np.sqrt(translation[0]**2 + translation[1]**2 + translation[2]**2)
-    # azimuth = np.degrees( np.arctan(unitvec[0]/unitvec[1]) )
-    # elevation = np.degrees( np.arctan2(unitvec[2],unitvec[1]) )
-    # ax.view_init(elev=elevation, azim=azimuth, roll=0)
-
+    '''
+    if translation[0] > 0:
+        if translation[2] > 0:
+            # print(el)
+            ax.view_init(elev=el, azim=-92, roll=180)
+        else:
+            ax.view_init(elev=50, azim=-92, roll=180)
+    else:
+        if translation[2] > 0:
+            ax.view_init(elev=-50, azim=92, roll=180)
+        else:
+            ax.view_init(elev=50, azim=92, roll=180)
+    '''
     ax.set_axis_off()
     ax.set_facecolor('black') 
 

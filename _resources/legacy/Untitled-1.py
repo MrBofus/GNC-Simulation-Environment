@@ -48,6 +48,7 @@ df = pd.read_csv('_out/simulation_results.txt')
 
 q = np.array([ df['q1'].iloc[0], df['q2'].iloc[0], df['q3'].iloc[0], df['q4'].iloc[0] ])
 rvec = -1* np.array([ df['x'].iloc[0], df['y'].iloc[0], df['z'].iloc[0] ])
+vvec = -1* np.array([ df['vx'].iloc[0], df['vy'].iloc[0], df['vz'].iloc[0] ])
 
 unitvec = normalize( rvec )
 
@@ -56,3 +57,7 @@ el = np.arcsin( unitvec[1] )
 
 print(az*180/np.pi)
 print(el*180/np.pi)
+
+zvec = np.array([0, 0, 1])
+angle = np.arccos(np.dot(zvec, vvec)/(np.sqrt(zvec[0]**2 + zvec[1]**2 + zvec[2]**2)*np.sqrt(vvec[0]**2 + vvec[1]**2 + vvec[2]**2)))
+print(angle*180/np.pi)

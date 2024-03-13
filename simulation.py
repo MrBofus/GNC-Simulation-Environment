@@ -25,12 +25,12 @@ t_to_start = time.monotonic()
 #   sun-synchronous: a = 565km, i = 97.5, raan = 157.5, e = 0.0005
 #   ISS:             a = 417km, i = 51.6, raan = 77.6,  e = 0.0006
 
-a = 565     # km
-e = 0.001   # unitless
-i = 97.5    # degrees
-raan = 90   # degrees
-argp = 0    # degrees
-nu = 0      # degrees
+a = 417         # km
+e = 0.0006      # unitless
+i = 51.6        # degrees
+raan = 77.6     # degrees
+argp = 0        # degrees
+nu = 0          # degrees
 
 # define satellite orbit given parameters
 satellite_orbit = [(a+6378.1)*10**3, e, i, raan, argp, nu]

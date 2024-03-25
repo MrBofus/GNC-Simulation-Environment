@@ -46,6 +46,7 @@ def normalize(vec):
 
 df = pd.read_csv('_out/simulation_results.txt')
 
+
 q = np.array([ df['q1'].iloc[0], df['q2'].iloc[0], df['q3'].iloc[0], df['q4'].iloc[0] ])
 rvec = -1* np.array([ df['x'].iloc[0], df['y'].iloc[0], df['z'].iloc[0] ])
 vvec = -1* np.array([ df['vx'].iloc[0], df['vy'].iloc[0], df['vz'].iloc[0] ])
@@ -73,3 +74,26 @@ q3 = np.cos(phi/2)*np.sin(theta/2)*np.cos(psi/2) + np.sin(phi/2)*np.cos(theta/2)
 q4 = np.cos(phi/2)*np.cos(theta/2)*np.sin(psi/2) - np.sin(phi/2)*np.sin(theta/2)*np.cos(psi/2)
 
 print(q1, q2, q3, q4)
+
+import matplotlib.pyplot as plt
+
+plt.plot(df['time'], df['wx'], label='wx')
+plt.plot(df['time'], df['wy'], label='wy')
+plt.plot(df['time'], df['wz'], label='wz')
+
+plt.grid()
+plt.show()
+
+'''
+import sys
+sys.path.append("../GNC-Simulation-Environment")
+import gnc_core.gnc_library as gnc
+
+r = 1000*np.array([ df['x'].iloc[0], df['y'].iloc[0], df['z'].iloc[0] ])
+
+print(r)
+lon, lat, alt = gnc.ECI_to_ECEF(r, 100)
+print(lon, lat, alt)
+r_ = gnc.ECEF_to_ECI(lat, lon, alt, 100)
+print(r_)
+'''

@@ -125,6 +125,23 @@ def ECI_to_ECEF(r, t):
     
     return lon, lat, alt
 
+def ECEF_to_ECI(lla, t):
+    
+    transformer = pyproj.Transformer.from_crs({"proj":'latlong', "ellps":'WGS84', "datum":'WGS84'},
+                                              {"proj":'geocent', "ellps":'WGS84', "datum":'WGS84'})
+    
+    x, y, z = transformer.transform(lla[1], lla[0], lla[2], radians=False)
+
+    gamma = (360/(23.9345*3600)) * t
+    gamma *= np.pi/180
+    gamma *= -1
+    
+    x_ = x*np.cos(gamma) - y*np.sin(gamma) # meters
+    y_ = x*np.sin(gamma) + y*np.cos(gamma) # meters
+    z_ = z # meters
+    
+    return [x_, y_, z_]
+
     
 
 def appendDataFrame(df, state, t, error, rwheel):

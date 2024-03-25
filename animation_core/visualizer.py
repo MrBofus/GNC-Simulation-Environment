@@ -185,4 +185,4 @@ if __name__ == "__main__":
         rlist.append(np.array([ df['x'].iloc[i], df['y'].iloc[i], df['z'].iloc[i] ]))
         vlist.append(np.array([ df['vx'].iloc[i], df['vy'].iloc[i], df['vz'].iloc[i] ]))
 
-    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=10)
+    runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)

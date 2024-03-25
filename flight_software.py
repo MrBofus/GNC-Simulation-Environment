@@ -1,4 +1,5 @@
 import quaternionMath as qm
+import gnc_core.gnc_library as gnc
 import numpy as np
 import copy
 
@@ -30,6 +31,9 @@ def p2controller(angularRate, quaternion, setpoint, kp, kd):
 
 def slidingModeController(angularRate, quaternion, setpoint,
                             kp, kd, sigma, order):
+    if setpoint == [-1, -1, -1, -1]:
+        return [0, 0, 0, 1], np.array([0, 0, 0])
+    
     quaternion_error = qm.quaternionDifference(quaternion, setpoint)
         
     controlTorque = []
@@ -49,7 +53,7 @@ def bDotController(angularRate, bField, gain):
     return -gain*np.cross(angularRate, bField)
 
 
-def ground_target_guidance(measurements, mode):
+def ground_target_guidance(measurements, mode, ground_station_list, gs_range):
     rvec = np.array( qm.normalize(measurements['rvec']) )
     vvec = np.array( qm.normalize(measurements['vvec']) )
     hvec = np.array( np.cross(rvec, vvec) )
@@ -59,6 +63,29 @@ def ground_target_guidance(measurements, mode):
     
     elif mode == 'prograde':
         return qm.dcm_to_quaternion( np.array([hvec, rvec, vvec]) )
+    
+    elif mode == 'downlink':
+        for i in range(len(ground_station_list)):
+            g_ = gnc.ECEF_to_ECI( ground_station_list[i], 0 )
+
+            r_ = 1000*np.array(measurements['rvec']) - np.array(g_)
+            if qm.magnitude(r_) < gs_range:
+                v_ = qm.orthogonalize(measurements['vvec'], r_)
+                h_ = np.cross(r_, v_)
+
+                return qm.dcm_to_quaternion(np.array(np.array([h_, v_, -r_])))  
+        return qm.dcm_to_quaternion( np.array([hvec, vvec, -rvec]) )
+
+
+def checkVicinity(measurements, ground_station_list, gs_range):
+    for i in range(len(ground_station_list)):
+        g_ = gnc.ECEF_to_ECI( ground_station_list[i], 0 )
+        r_ = 1000*np.array(measurements['rvec']) - np.array(g_)
+
+        if qm.magnitude(r_) < gs_range:
+            return r_
+
+    return [-1, -1, -1]
 
 
 
@@ -107,6 +134,8 @@ class schedulerApp():
                     'gps_noise_r':0.01,
                     'gps_noise_v':0.01,
 
+                    'gs_range':1600*10**3,
+
                     }
         
         self._p = defaults
@@ -115,6 +144,18 @@ class schedulerApp():
             if arg in defaults:
                 self._p[arg]=value
                 outstr += '\t--- updated: ' + arg + ' --> ' + str(value) + '\n'
+        
+        self.ground_station_list = [[30+41/60+27.8/3600, 88+10/60+31.5/3600, 0],
+                                    [39.738868, -105.633692, 0],
+                                    [4.811922, -55.840339, 0],
+                                    [1.556200, 35.415574, 0],
+                                    [50.454624, 8.355310, 0],
+                                    [25.078205, 55.204769, 0],
+                                    [23.303307, 89.085583, 0],
+                                    [39.586561, 117.316221, 0],
+                                    [1.310168, 103.700177, 0],
+                                    [19.705257, -155.732732, 0],
+                                    ]
         
         outstr += '\n' + str(self._p)
         printout(outstr)
@@ -142,12 +183,27 @@ class schedulerApp():
             self.mode = 'detumble'
         
         self._run_navigation()
+        self._run_guidance()
         self._run_control()
 
         pass
 
 
     # flight apps {#211, 48}
+    def _run_guidance(self):
+        if self.mode == 'detumble':
+            self.cmd = 'detumble'
+            return None
+        
+        if qm.magnitude(checkVicinity(self.m.measurements, 
+                                      self.ground_station_list, 
+                                      self._p['gs_range'])) < self._p['gs_range']:
+            self.cmd = 'downlink'
+        
+        else:
+            self.cmd = 'nadir'
+
+
     def _run_navigation(self):
         wvec = rg.pull_gyro(self._s, noise=self._p['rg_noise'])
         qvec = st.pull_star_tracker(self._s, noise=self._p['st_noise'])
@@ -167,7 +223,7 @@ class schedulerApp():
             if qm.magnitude(self.m.measurements['angularRate']) < 0.002:
                 self._write_command_to_magnetorquer(mt_command)
                 self._write_command_to_reactionWheel(rw_command)
-                self._write_variables_to_state('dataCollection', q_error)
+                self._write_variables_to_state('operation', q_error)
                 return None
             
             self._write_command_to_magnetorquer(mt_command)
@@ -175,22 +231,28 @@ class schedulerApp():
             self._write_variables_to_state(self.mode, q_error)
             return None
         
-        elif self.mode == 'dataCollection':
-            mt_command = [0, 0, 0]
-            
-            cmd = 'nadir'
-            
-            if cmd == 'nadir':
-                q_setpoint = ground_target_guidance(self.m.measurements, 'nadir')
+        elif self.mode == 'operation':
+            if self.cmd == 'nadir':
+                q_setpoint = ground_target_guidance(self.m.measurements, 'nadir', 
+                                                    self.ground_station_list, self._p['gs_range'])
    
-            elif cmd == 'prograde':
-                q_setpoint = ground_target_guidance(self.m.measurements, 'prograde')
+            elif self.cmd == 'prograde':
+                q_setpoint = ground_target_guidance(self.m.measurements, 'prograde', 
+                                                    self.ground_station_list, self._p['gs_range'])
+            
+            elif self.cmd == 'downlink':
+                q_setpoint = ground_target_guidance(self.m.measurements, 'downlink', 
+                                                    self.ground_station_list, self._p['gs_range'])
+            
+            else:
+                q_setpoint = [-1, -1, -1, -1]
 
 
             q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
                                                         self.m.measurements['quaternion'], q_setpoint, 
                                                         self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
-            
+
+            mt_command = [0, 0, 0]
             self._write_command_to_magnetorquer(mt_command)
             self._write_command_to_reactionWheel(rw_command)
             self._write_variables_to_state(self.mode, q_error)

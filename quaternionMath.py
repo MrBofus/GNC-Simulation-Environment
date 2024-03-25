@@ -109,3 +109,12 @@ def dcm_to_quaternion(dcm):
         q3 = (1/(4*q4)) * ( dcm[0][1] - dcm[1][0] )
 
         return normalize( np.array([q1, q2, q3, q4]) )
+
+
+def orthogonalize(v, u):
+    v = np.array(normalize(v))
+    u = np.array(normalize(u))
+
+    proj_v_onto_u = ( np.dot(v, u)/np.dot(u, u) ) * u
+
+    return normalize( v - proj_v_onto_u )

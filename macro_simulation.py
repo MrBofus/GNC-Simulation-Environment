@@ -9,10 +9,12 @@ import pandas as pd
 import quaternionMath as qm
 import time
 import random
-import copy
+from astropy import units as u
+import matplotlib.pyplot as plt
 
 # import flight software
 import flightsoftware_core.flight_software as fs
+from flightsoftware_core.QLaw import solveQLaw
 
 # start simulation timer
 t_to_start = time.monotonic()
@@ -86,7 +88,7 @@ moment_of_inertia = [Ixx, Iyy, Izz] # kg-m^2
 q_initial = qm.normalize(np.array([random.random(), random.random(), random.random(), random.random()]))
 
 # initial angular rate ( rad/s )
-w_initial = 0.2*np.array([0.016, 0.08, -0.016])
+w_initial = 0.2*np.array([0, 0, 0])
 
 # build the state handler for the simulation
 state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
@@ -94,48 +96,13 @@ state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
 
 
 # timestep to run physics simulation
-physicsHz = 20            # Hz
+physicsHz = (1/(3*60))            # Hz
 
 # timestep to run flight software
 flightSoftwareHz = 5      # Hz
 
 # total simulation time
-simTime = 0.2*state.orbit.period.value   # s
-
-
-# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
-# reaction wheel parameters
-#
-# https://www.rocketlabusa.com/assets/Uploads/10-mNms-RW-0.01-Data-Sheet.pdf
-# power consumption at max speed / max torque: 1.05 W
-# power consumption at max speed / no torque: 0.25 W
-# power consumption at no speed / no torque: 0.11 W
-
-max_wheel_speed = 6500*0.1047198        # rad/s
-wheel_moi = 0.018 / max_wheel_speed     # Nms^2 or kgm^2
-max_wheel_torque = 1*10**-3             # Nm
-min_wheel_speed = 0.1*0.1047198         # rad/s
-
-power_consumption_idle = 0.11        # W
-power_consumption_active = 1.05      # W
-
-reactionWheelAssembly = gnc.reactionWheelAssembly(wheel_moi, max_wheel_speed, max_wheel_torque, min_wheel_speed)
-
-
-# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
-# magnetorquer parameters
-#
-# Jagsat-specific hardware, maybe link to ICD?
-
-n_turns = 2*40                  # unitless (times two to reflect 2 magnetorquers)
-length = 20 * 10**-2            # meters
-width = 10 * 10**-2             # meters
-max_current = 40 * 10 ** -3     # Amps
-
-power_consumption_idle = 0               # W
-power_consumption_active = 5*max_current # W
-
-magnetorquerAssembly = gnc.magnetorquerAssembly(n_turns, length, width, max_current)
+simTime = 200*state.orbit.period.value   # s
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -182,42 +149,50 @@ while t < simTime:
     # add random disturbance torques
     disturbanceTorque = (10**-7)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)]) # N
 
-    # propagate attitude one timestep
-    state.propagateAttitude(controlTorque, disturbanceTorque, (1/physicsHz))
-
     # propagate posiition one timestep
     state.propagatePosition(thrust, disturbanceForce, (1/physicsHz))
 
     
-    # if this timestep is a software timestep, iterate flight software once
-    if counter % int(physicsHz / flightSoftwareHz) == 0:
-
-        # flight software loop {#467, 7}
-        
-        # expose flight software to current physical state
-        scheduler._physics_to_harware_int(state)
-
-        # advance flight software one timestep
-        scheduler._iterate()
-
-        
-        # write commands to reaction wheels
-        reactionWheelAssembly.commandReactionWheels(scheduler.rw_command)
-        # write commands to magnetorquers
-        magnetorquerAssembly.commandMangetorquers(scheduler.mt_command)
+    Wp = 1
+    rp_min = 400000
+    f_mag = thrust_magnitude
+    Wa = 10
+    We = 10
+    Wi = 1
+    Wraan = 0
+    Wargp = 0
+    aT = (530+6378.1)*10**3
+    eT = 0.001
+    iT = 51.9 * np.pi/180
+    raanT = 0
+    argpT = 0
     
-
-    # allow reaction wheels to influence physical state
-    reactionWheelAssembly.actuateReactionWheels(1/physicsHz)
-    # allow magnetorquers to influence physical state
-    magnetorquerAssembly.actuateMagnetorquers(state)
+    gvec, q_dot = solveQLaw(state.orbit, Wp, rp_min, f_mag,
+                            Wa, We, Wi, Wraan, Wargp,
+                            aT, eT, iT, raanT, argpT)
     
-    # consolidate physical influences
-    controlTorque = copy.deepcopy(reactionWheelAssembly.wheel_torques) + copy.deepcopy(magnetorquerAssembly.torque)
+    r_mag = qm.normalize(state.orbit.r.value)
+    v_mag = qm.normalize(state.orbit.v.value)
+    h_mag = np.cross(v_mag, r_mag)
+    
+    gvec_local = [r_mag[0]*gvec[0] + v_mag[0]*gvec[1] + h_mag[0]*gvec[2],
+                  r_mag[1]*gvec[0] + v_mag[1]*gvec[1] + h_mag[1]*gvec[2],
+                  r_mag[2]*gvec[0] + v_mag[2]*gvec[1] + h_mag[2]*gvec[2]]
+
+    '''
+    if (state.orbit.nu << u.deg).value > 90 and (state.orbit.nu << u.deg).value < 180:
+        thrust = thrust_magnitude * np.array(gvec_local)
+    else:
+        thrust = [0, 0, 0]
+    '''
+    thrust = thrust_magnitude * np.array(gvec_local)
 
 
     # append variables to dataframe to monitor results
-    df = gnc.appendDataFrame(df, state, t, scheduler.q_error, reactionWheelAssembly)
+    tempdf = pd.DataFrame({'t':[t], 'a':[(state.orbit.a << u.km).value],
+                           'e':[state.orbit.ecc.value], 'i':[(state.orbit.inc << u.deg).value],
+                           'q dot':[q_dot]})
+    df = pd.concat([df, tempdf])
     
     # update user about simulation status
     if counter%1000 == 0:
@@ -231,11 +206,30 @@ while t < simTime:
 # when simulation is finished, stop the timer
 t_to_finish = time.monotonic()
 
-# generate plots for user
-gnc.plot_quaternion_error(df)
-
 # display time to finish simulation
 print('\nsimulation took ' + str(round((t_to_finish-t_to_start) / 60, 1)) + ' minutes')
+
+# generate plots for user
+plt.figure(1)
+plt.plot([0, df['t'].iloc[-1]], [aT/(10**3)-6371.8, aT/(10**3)-6371.8], 'k-')
+plt.plot(df['t'], df['a']-6371.8)
+plt.grid()
+
+plt.figure(2)
+plt.plot([0, df['t'].iloc[-1]], [eT, eT], 'k-')
+plt.plot(df['t'], df['e'])
+plt.grid()
+
+plt.figure(3)
+plt.plot([0, df['t'].iloc[-1]], [iT*180/np.pi, iT*180/np.pi], 'k-')
+plt.plot(df['t'], df['i'])
+plt.grid()
+
+plt.figure(4)
+plt.plot(df['t'], df['q dot'])
+plt.grid()
+
+plt.show()
 
 # write results to csv for future analysis
 df.to_csv('_out/simulation_results.txt')

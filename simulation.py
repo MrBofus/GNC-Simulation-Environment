@@ -12,7 +12,7 @@ import random
 import copy
 
 # import flight software
-import flight_software as fs
+import flightsoftware_core.flight_software as fs
 
 # start simulation timer
 t_to_start = time.monotonic()
@@ -86,7 +86,7 @@ moment_of_inertia = [Ixx, Iyy, Izz] # kg-m^2
 q_initial = qm.normalize(np.array([random.random(), random.random(), random.random(), random.random()]))
 
 # initial angular rate ( rad/s )
-w_initial = np.array([0.16, 0.08, -0.16])
+w_initial = 0.2*np.array([0.016, 0.08, -0.016])
 
 # build the state handler for the simulation
 state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
@@ -100,7 +100,7 @@ physicsHz = 20            # Hz
 flightSoftwareHz = 5      # Hz
 
 # total simulation time
-simTime = 0.25*state.orbit.period.value   # s
+simTime = 0.2*state.orbit.period.value   # s
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -171,7 +171,7 @@ t = 0
 # begin flight software and update user variables if any
 
 scheduler = fs.schedulerApp()
-scheduler._update_user_variables(bDot_gain=10**-2, smc_kp=0.003, smc_kd=0.015)
+scheduler._update_user_variables(bDot_gain=10**5, smc_ki=0.001, smc_kp=0.003, smc_kd=0.015, gs_range=0)
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #

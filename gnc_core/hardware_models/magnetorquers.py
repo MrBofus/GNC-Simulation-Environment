@@ -24,7 +24,7 @@ class magnetorquerAssembly():
         for i in range(3):
             i_command.append( limit(current_command[i], self.max_current) )
         
-        i_command[2] = 0
+        # i_command[2] = 0
         self.current_command = np.array(i_command)
     
     def actuateMagnetorquers(self, state):

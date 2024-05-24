@@ -32,7 +32,7 @@ def quaternionDifference(q1, q2):
     return normalize( [ delta_x, delta_y, delta_z, delta_w ] )
 
 def conjugate(q):
-    return [-q[0], -q[1], -q[2], q[3]]
+    return [ -q[0], -q[1], -q[2], q[3] ]
 
 
 
@@ -110,6 +110,14 @@ def dcm_to_quaternion(dcm):
 
         return normalize( np.array([q1, q2, q3, q4]) )
 
+def quaternion2euler(quaternion):
+    qw, qx, qy, qz = quaternion[3], quaternion[0], quaternion[1], quaternion[2]
+
+    phi = np.arctan2( 2*(qw*qx + qy*qz), 1 - 2*(qx**2 + qy**2) )
+    theta = -np.pi/2 + 2*np.arctan2( np.sqrt(1 + 2*(qw*qy - qx*qz)), np.sqrt(1 - 2*(qw*qy - qx*qz)) )
+    psi = np.arctan2( 2*(qw*qz + qx*qy), 1 - 2*(qy**2 + qz**2) )
+
+    return phi, theta, psi
 
 def orthogonalize(v, u):
     v = np.array(normalize(v))

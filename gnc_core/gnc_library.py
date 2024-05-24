@@ -89,7 +89,7 @@ class satelliteState():
 
         B_body = qm.quaternionMultiply( qm.quaternionMultiply(q, B_true), qm.conjugate(q) )
         self.B_true = np.array([ B_true[0], B_true[1], B_true[2] ])
-        self.B_body = np.array([ B_body[0], B_body[1], B_body[2] ])
+        self.B_body = qm.magnitude(B_true) * np.array([ B_body[0], B_body[1], B_body[2] ])
 
     
     def propagatePosition(self,  controlForce, disturbanceForce, dt):

@@ -90,8 +90,14 @@ def handleUpdate(mesh_, translation, vvec, ax, quaternion: np.array, index: int,
     unitvec = -1*np.array( qm.normalize(translation) )
     ax.azim = (180/np.pi)*np.arctan2( unitvec[1], unitvec[0] )
     ax.elev = (180/np.pi)*np.arcsin( unitvec[2] )
+    
+    # unitvec = np.array( qm.normalize( [quaternion[2], quaternion[0], quaternion[1]] ) )
+    # ax.azim = -(180/np.pi)*np.arctan2( unitvec[1], unitvec[0] )
+    # ax.elev = (180/np.pi)*np.arcsin( unitvec[2] )
 
-    ax.elev += 0
+    ax.roll = -2*np.arccos(quaternion[3])
+
+    ax.elev += -18
 
     '''
     if translation[0] > 0:
@@ -141,7 +147,7 @@ def runVisualizer(qlist: list, rlist:list, eventlist: list, pause_amount: float,
     earth_mesh = mesh.Mesh.from_file('_resources/earth_model.stl')
 
     meshhandler = mesh_organizer_(deployed_mesh=sat_mesh, 
-                                  earth_mesh = earth_mesh)
+                                  earth_mesh=earth_mesh)
 
     for t in range(len(qlist)):
         if t%buffer_amount == 0:

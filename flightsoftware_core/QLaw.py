@@ -1,4 +1,4 @@
-import quaternionMath as qm
+import math.quaternionMath as qm
 from astropy import units as u
 
 import numpy as np

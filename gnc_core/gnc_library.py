@@ -8,7 +8,7 @@ from gnc_core.orbit_propagater import fpropagate
 import matplotlib.pyplot as plt
 import copy
 import pyIGRF
-import quaternionMath as qm
+import math.quaternionMath as qm
 
 
 from gnc_core.hardware_models.reaction_wheel import reactionWheelAssembly

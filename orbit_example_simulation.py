@@ -98,8 +98,6 @@ state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
 # timestep to run physics simulation
 physicsHz = (1/(3*60))            # Hz
 
-# timestep to run flight software
-flightSoftwareHz = 5      # Hz
 
 # total simulation time
 simTime = 200*state.orbit.period.value   # s
@@ -136,9 +134,6 @@ t = 0
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
 # flight software begin {#467, 5}
 # begin flight software and update user variables if any
-
-scheduler = fs.schedulerApp()
-scheduler._update_user_variables(bDot_gain=10**5, smc_ki=0.001, smc_kp=0.003, smc_kd=0.015, gs_range=0)
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #

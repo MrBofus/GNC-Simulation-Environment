@@ -1,8 +1,7 @@
-import math.quaternionMath as qm
+import quaternion_math.quaternionMath as qm
 
 import gnc_core.gnc_library as gnc
 import numpy as np
-import copy
 
 
 

@@ -11,10 +11,6 @@ import pyIGRF
 import quaternion_math.quaternionMath as qm
 
 
-from gnc_core.hardware_models.reaction_wheel import reactionWheelAssembly
-from gnc_core.hardware_models.magnetorquers import magnetorquerAssembly
-
-
 class satelliteState():
     def __init__(self, satellite_orbit, moment_of_inertia, satellite_mass,
                  satellite_area, q_initial, w_initial):

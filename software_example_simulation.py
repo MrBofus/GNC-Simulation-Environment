@@ -6,13 +6,13 @@
 import gnc_core.gnc_library as gnc
 import numpy as np
 import pandas as pd
-import quaternionMath as qm
+import quaternion_math.quaternionMath as qm
 import time
 import random
 import copy
 
 # import flight software
-import flightsoftware_core.flight_software as fs
+import example_flight_software.example_flight_software.flight_software as fs
 
 # start simulation timer
 t_to_start = time.monotonic()

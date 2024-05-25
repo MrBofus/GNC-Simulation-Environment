@@ -1,2 +1,3 @@
-tempfiles
+/tempfiles
 *_legacy.py
+temp.py

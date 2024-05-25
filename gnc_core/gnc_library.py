@@ -8,7 +8,7 @@ from gnc_core.orbit_propagater import fpropagate
 import matplotlib.pyplot as plt
 import copy
 import pyIGRF
-import math.quaternionMath as qm
+import quaternion_math.quaternionMath as qm
 
 
 from gnc_core.hardware_models.reaction_wheel import reactionWheelAssembly
@@ -105,7 +105,42 @@ class satelliteState():
         
         self.orbit = new_orbit
         
+
+class satelliteState_orbit():
+    def __init__(self, satellite_orbit, satellite_mass, satellite_area):
+        self.m = satellite_mass
+        self.A = satellite_area
         
+        self.a = satellite_orbit[0] << u.m
+        self.e = satellite_orbit[1] << u.one
+        self.i = satellite_orbit[2] << u.deg
+        self.O = satellite_orbit[3] << u.deg
+        self.w = satellite_orbit[4] << u.deg
+        self.nu = satellite_orbit[5] << u.deg
+        
+        self.orbit = Orbit.from_classical(Earth, self.a, self.e, self.i, self.O, self.w, self.nu)
+        
+        self.controlForce = [0, 0, 0]
+        self.disturbanceForce = [0, 0, 0]
+        
+        self.latitude = 0
+        self.longitude = 0
+        self.altitude = 0
+        
+        self.t = 0
+  
+    def propagatePosition(self,  controlForce, disturbanceForce, dt):
+        self.t += dt
+        
+        self.controlForce = controlForce
+        self.disturbanceForce = disturbanceForce
+        
+        # new_orbit = self.orbit.propagate(dt << u.second)
+        new_orbit = fpropagate(self.orbit, controlForce, self.m, self.A, self.t, dt)
+        
+        self.longitude, self.latitude, self.altitude = ECI_to_ECEF((new_orbit.r << u.meter).value, self.t)
+        
+        self.orbit = new_orbit    
 
 
 

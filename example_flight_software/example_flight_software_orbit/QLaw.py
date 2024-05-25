@@ -35,20 +35,20 @@ def return_Q_partials(orbit, Wp, rp_min, f_mag,
                       Wa, We, Wi, Wraan, Wargp,
                       aT, eT, iT, raanT, argpT):
     
-    mu = 3.986 * 10**14
+    mu =    3.986 * 10**14
     
-    a = (orbit.a << u.meter).value
-    e = orbit.ecc.value
-    i = (orbit.inc << u.radian).value
-    raan = (orbit.raan << u.radian).value
-    argp = (orbit.argp << u.radian).value
-    nu = (orbit.nu << u.radian).value
+    a =     (orbit.a << u.meter).value
+    e =     orbit.ecc.value
+    i =     (orbit.inc << u.radian).value
+    raan =  (orbit.raan << u.radian).value
+    argp =  (orbit.argp << u.radian).value
+    nu =    (orbit.nu << u.radian).value
     
     r = (orbit.r << u.meter).value
     v = (orbit.v << u.meter/u.second).value
     
-    p = a*(1-e**2)
-    h = qm.magnitude(np.cross(r, v))
+    p =     a*(1-e**2)
+    h =     qm.magnitude(np.cross(r, v))
     r_mag = qm.magnitude(r)
     
     
@@ -67,50 +67,50 @@ def return_Q_partials(orbit, Wp, rp_min, f_mag,
     
     ####################
     
-    Va = S * ( (a - aT)/a_dot_xx )**2
-    dP_da = 100 * (1 - a*term1) * term1 * P
+    Va =            S * ( (a - aT)/a_dot_xx )**2
+    dP_da =         100 * (1 - a*term1) * term1 * P
     
-    da_dot_xx_da = 6*f_mag*( (a**2 * (1 + e)) / (mu * (1 - e)) )
-    dVa_da = ( (2/(3*aT)) * (term2**3) * (1 + term2**4)**(-1/2) ) * da**2 + 2*S*da*( (a_dot_xx - (a-aT)*da_dot_xx_da) / a_dot_xx**2 )
+    da_dot_xx_da =  6*f_mag*( (a**2 * (1 + e)) / (mu * (1 - e)) )
+    dVa_da =        ( (2/(3*aT)) * (term2**3) * (1 + term2**4)**(-1/2) ) * da**2 + 2*S*da*( (a_dot_xx - (a-aT)*da_dot_xx_da) / a_dot_xx**2 )
     
-    dV_da = dVa_da
+    dV_da =         dVa_da
     
-    dQ_da = Wp*dP_da*Wa*Va + (1+Wp*P)*Wa*dV_da
+    dQ_da =         Wp*dP_da*Wa*Va + (1+Wp*P)*Wa*dV_da
     
     ####################
     
-    Ve = ( (e - eT)/e_dot_xx )**2
-    dP_de = 100 * (1 - a*term1) * (a / rp_min) * P
+    Ve =            ( (e - eT)/e_dot_xx )**2
+    dP_de =         100 * (1 - a*term1) * (a / rp_min) * P
     
     de_dot_xx_de = -4*(f_mag/h)*a*e
-    dVe_de = 2 * ( (e - eT)/e_dot_xx ) * ((e_dot_xx - (e-eT)*de_dot_xx_de) / (e_dot_xx**2))
-    dV_de = dVe_de
+    dVe_de =        2 * ( (e - eT)/e_dot_xx ) * ((e_dot_xx - (e-eT)*de_dot_xx_de) / (e_dot_xx**2))
+    dV_de =         dVe_de
     
-    dQ_de = Wp*dP_de*We*Ve + (1+Wp*P)*We*dV_de
+    dQ_de =         Wp*dP_de*We*Ve + (1+Wp*P)*We*dV_de
 
     ####################
     
-    di = np.arccos(np.cos(i - iT))
-    Vi = (di / i_dot_xx)**2
-    dP_di = 0
+    di =            np.arccos(np.cos(i - iT))
+    Vi =            (di / i_dot_xx)**2
+    dP_di =         0
     
-    di_dot_xx_di = 0
-    dVi_di = 2 * (di / i_dot_xx) * ((i_dot_xx - di*di_dot_xx_di) / i_dot_xx**2)
-    dV_di = dVi_di
+    di_dot_xx_di =  0
+    dVi_di =        2 * (di / i_dot_xx) * ((i_dot_xx - di*di_dot_xx_di) / i_dot_xx**2)
+    dV_di =         dVi_di
     
-    dQ_di = Wp*dP_di*Wi*Vi + (1+Wp*P)*Wi*dV_di
+    dQ_di =         Wp*dP_di*Wi*Vi + (1+Wp*P)*Wi*dV_di
   
     ####################
     
-    draan = np.arccos(np.cos(raan - raanT))
-    Vraan = (draan / raan_dot_xx)**2
-    dP_draan = 0
+    draan =         np.arccos(np.cos(raan - raanT))
+    Vraan =         (draan / raan_dot_xx)**2
+    dP_draan =      0
     
     draan_dot_xx_draan = 0
-    dVraan_draan = 2 * (draan / raan_dot_xx) * ((raan_dot_xx - draan*draan_dot_xx_draan) / raan_dot_xx**2)
-    dV_draan = dVraan_draan
+    dVraan_draan =  2 * (draan / raan_dot_xx) * ((raan_dot_xx - draan*draan_dot_xx_draan) / raan_dot_xx**2)
+    dV_draan =      dVraan_draan
     
-    dQ_draan = Wp*dP_draan*Wraan*Vraan + (1+Wp*P)*Wraan*dV_draan
+    dQ_draan =      Wp*dP_draan*Wraan*Vraan + (1+Wp*P)*Wraan*dV_draan
     
     ####################
         
@@ -125,33 +125,33 @@ def return_oe_dot_xx(f_mag, orbit):
 
     mu = 3.986 * 10**14
     
-    a = (orbit.a << u.meter).value
-    e = orbit.ecc.value
-    i = (orbit.inc << u.radian).value
-    raan = (orbit.raan << u.radian).value
-    argp = (orbit.argp << u.radian).value
-    nu = (orbit.nu << u.radian).value
+    a =     (orbit.a << u.meter).value
+    e =     orbit.ecc.value
+    i =     (orbit.inc << u.radian).value
+    raan =  (orbit.raan << u.radian).value
+    argp =  (orbit.argp << u.radian).value
+    nu =    (orbit.nu << u.radian).value
     
     r = (orbit.r << u.meter).value
     v = (orbit.v << u.meter/u.second).value
     
-    p = a*(1-e**2)
-    h = qm.magnitude(np.cross(r, v))
+    p =     a*(1-e**2)
+    h =     qm.magnitude(np.cross(r, v))
     r_mag = qm.magnitude(r)
     
     
-    a_dot_xx = 2*f_mag*np.sqrt( (a**3 * (1+e)) / (mu * (1-e)) ) 
-    e_dot_xx = 2*p*f_mag / h
-    i_dot_xx = p*f_mag / ( h * (np.sqrt(1 - e**2 * np.cos(argp)**2) - e*abs(np.cos(argp))) )
-    raan_dot_xx = p*f_mag / ( h * np.sin(i) * (np.sqrt(1 - e**2 * np.cos(argp)**2) - e*abs(np.sin(argp))) )
+    a_dot_xx =      2*f_mag*np.sqrt( (a**3 * (1+e)) / (mu * (1-e)) ) 
+    e_dot_xx =      2*p*f_mag / h
+    i_dot_xx =      p*f_mag / ( h * (np.sqrt(1 - e**2 * np.cos(argp)**2) - e*abs(np.cos(argp))) )
+    raan_dot_xx =   p*f_mag / ( h * np.sin(i) * (np.sqrt(1 - e**2 * np.cos(argp)**2) - e*abs(np.sin(argp))) )
     
     b = 0.01
-    cos_theta_xx = ( ((1-e**2)/(2*e**3)) + np.sqrt(0.25*((1-e**2)/(e**3))**2 + (1/27)) )**(1/3) - ( -((1-e**2)/(2*e**3)) + np.sqrt(0.25*((1-e**2)/(e**3))**2 + (1/27)) )**(1/3) - (1/e)
-    rxx = p / (1 + e*cos_theta_xx)
-    argp_dot_xx_i = (f_mag / (e*h)) * np.sqrt(p**2 * cos_theta_xx + (p+rxx)**2 * np.sin(nu)) # is cos_theta_xx == cos(nu) ?
+    cos_theta_xx =  ( ((1-e**2)/(2*e**3)) + np.sqrt(0.25*((1-e**2)/(e**3))**2 + (1/27)) )**(1/3) - ( -((1-e**2)/(2*e**3)) + np.sqrt(0.25*((1-e**2)/(e**3))**2 + (1/27)) )**(1/3) - (1/e)
+    rxx =           p / (1 + e*cos_theta_xx)
+    argp_dot_xx_i = (f_mag / (e*h)) * np.sqrt(abs(p**2 * cos_theta_xx + (p+rxx)**2 * np.sin(nu))) # is cos_theta_xx == cos(nu) ?
     argp_dot_xx_o = raan_dot_xx * abs(np.cos(i))
     
-    argp_dot_xx = (argp_dot_xx_i + b*argp_dot_xx_o) / (1 + b)
+    argp_dot_xx =   (argp_dot_xx_i + b*argp_dot_xx_o) / (1 + b)
     
     
     return a_dot_xx, e_dot_xx, i_dot_xx, raan_dot_xx, argp_dot_xx
@@ -159,18 +159,18 @@ def return_oe_dot_xx(f_mag, orbit):
 
 def return_oe_partials(orbit):
     
-    a = (orbit.a << u.meter).value
-    e = orbit.ecc.value
-    i = (orbit.inc << u.radian).value
-    raan = (orbit.raan << u.radian).value
-    argp = (orbit.argp << u.radian).value
-    nu = (orbit.nu << u.radian).value
+    a =     (orbit.a << u.meter).value
+    e =     orbit.ecc.value
+    i =     (orbit.inc << u.radian).value
+    raan =  (orbit.raan << u.radian).value
+    argp =  (orbit.argp << u.radian).value
+    nu =    (orbit.nu << u.radian).value
     
     r = (orbit.r << u.meter).value
     v = (orbit.v << u.meter/u.second).value
     
-    p = a*(1-e**2)
-    h = qm.magnitude(np.cross(r, v))
+    p =     a*(1-e**2)
+    h =     qm.magnitude(np.cross(r, v))
     r_mag = qm.magnitude(r)
     
     

@@ -57,8 +57,8 @@ class schedulerApp():
             else:
                 outstr += '\033[0;31m\t--- warning: ' + arg + ' not recognized as defualt variable, no action taken\033[0;32m\n'
         
-        outstr += '\n' + str(self._p)
-        print(outstr)
+        outstr += '\n\t' + str(self._p)
+        print('\n\nscheduler:\n'+outstr)
 
 
     def _write_command_to_thruster(self, command):
@@ -116,9 +116,9 @@ class schedulerApp():
         
         elif self.mode == 'transfer_1':
 
-            if (self.state.orbit.a << u.meter).value > 0.99*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.01*self._p['aT']:
+            if (self.state.orbit.a << u.meter).value > 0.9999*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.0001*self._p['aT']:
                 if (self.state.orbit.inc << u.radian).value > 0.9999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.0001*self._p['iT']:
-                    if self.state.orbit.ecc.value > 0.99*self._p['eT'] and self.state.orbit.ecc.value < 1.01*self._p['eT']:
+                    if self.state.orbit.ecc.value > 0.9999*self._p['eT'] and self.state.orbit.ecc.value < 1.0001*self._p['eT']:
                         self._write_variables_to_state('hold_1')
                         self.t_crit = self.systemClock
 
@@ -129,16 +129,16 @@ class schedulerApp():
 
             if self.systemClock > self.t_crit + 2* (24*3600)/(3*60):
                 self._write_variables_to_state('transfer_2')
-                self._update_user_variables(aT=self._p['aT']+200000)
+                self._update_user_variables(aT=self._p['aT']+200000, Wa=15, We=1, Wi=1)
                 
                 pass
             pass
         
         elif self.mode == 'transfer_2':
 
-            if (self.state.orbit.a << u.meter).value > 0.99*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.01*self._p['aT']:
+            if (self.state.orbit.a << u.meter).value > 0.9999*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.0001*self._p['aT']:
                 if (self.state.orbit.inc << u.radian).value > 0.9999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.0001*self._p['iT']:
-                    if self.state.orbit.ecc.value > 0.99*self._p['eT'] and self.state.orbit.ecc.value < 1.01*self._p['eT']:
+                    if self.state.orbit.ecc.value > 0.9999*self._p['eT'] and self.state.orbit.ecc.value < 1.01*self._p['eT']:
                         self._write_variables_to_state('hold_2')
                         self.t_crit = self.systemClock
 

@@ -150,7 +150,8 @@ while t < simTime:
 
     # append variables to dataframe to monitor results
     tempdf = pd.DataFrame({'t':[t], 'a':[(state.orbit.a << u.km).value],
-                           'e':[state.orbit.ecc.value], 'i':[(state.orbit.inc << u.deg).value]})
+                           'e':[state.orbit.ecc.value], 'i':[(state.orbit.inc << u.deg).value],
+                           'aT':[scheduler._p['aT']/10**3], 'eT':[scheduler._p['eT']], 'iT':[scheduler._p['iT']*180/np.pi]})
     df = pd.concat([df, tempdf])
     
     # update user about simulation status
@@ -174,19 +175,19 @@ print('\nsimulation took ' + str(round((t_to_finish-t_to_start) / 60, 1)) + ' mi
 # generate plots for user
 plt.figure(1)
 plt.title('altitude vs. time')
-# plt.plot([0, df['t'].iloc[-1]], [aT/(10**3)-6371.8, aT/(10**3)-6371.8], 'k-')
+plt.plot(df['t'], df['aT']-6371.8, 'k-')
 plt.plot(df['t'], df['a']-6371.8)
 plt.grid()
 
 plt.figure(2)
 plt.title('eccentricity vs. time')
-# plt.plot([0, df['t'].iloc[-1]], [eT, eT], 'k-')
+plt.plot(df['t'], df['eT'], 'k-')
 plt.plot(df['t'], df['e'])
 plt.grid()
 
 plt.figure(3)
 plt.title('inclination vs. time')
-# plt.plot([0, df['t'].iloc[-1]], [iT*180/np.pi, iT*180/np.pi], 'k-')
+plt.plot(df['t'], df['iT'], 'k-')
 plt.plot(df['t'], df['i'])
 plt.grid()
 

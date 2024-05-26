@@ -83,7 +83,7 @@ physics_timestep = 3*60                 # seconds
 
 
 # maximum simulation time (this example will cut off early once target state is reached)
-simTime = 100*24*3600   # s
+simTime = 1000*24*3600   # s
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -117,7 +117,7 @@ t = 0
 # begin flight software and update user variables if any
 
 scheduler = fs.schedulerApp()
-scheduler._update_user_variables(f_mag = 330 * 10**-6)
+scheduler._update_user_variables(f_mag = 330 * 10**-6, aT=(5000+6378.1)*10**3, iT=(60*np.pi/180))
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #

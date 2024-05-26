@@ -10,6 +10,8 @@ import copy
 import pyIGRF
 import quaternion_math.quaternionMath as qm
 
+from gnc_core.hardware_models.reaction_wheel import reactionWheelAssembly
+from gnc_core.hardware_models.magnetorquers import magnetorquerAssembly
 
 class satelliteState():
     def __init__(self, satellite_orbit, moment_of_inertia, satellite_mass,
@@ -176,7 +178,7 @@ def ECEF_to_ECI(lla, t):
     
 
 def appendDataFrame(df, state, t, error, rwheel):
-    tempdf = pd.DataFrame({
+    tempdf = pd.DataFrame({'type':['attitude'],
                            'time':[t], 
                            'Mx':[state.controlTorque[0]], 'My':[state.controlTorque[1]], 'Mz':[state.controlTorque[2]],
                            'Fx':[state.controlForce[0]], 'Fy':[state.controlForce[1]], 'Fz':[state.controlForce[2]],
@@ -195,9 +197,19 @@ def appendDataFrame(df, state, t, error, rwheel):
     return pd.concat([df, tempdf])
 
 
+def appendDataFrame_orbit(df, state, scheduler, t):
+    tempdf = pd.DataFrame({'type':['orbit'],
+                           'time':[t], 'a':[(state.orbit.a << u.km).value],
+                           'e':[state.orbit.ecc.value], 'i':[(state.orbit.inc << u.deg).value],
+                           'aT':[scheduler._p['aT']/10**3], 'eT':[scheduler._p['eT']], 'iT':[scheduler._p['iT']*180/np.pi],
+                           'x':[(state.orbit.r[0] << u.km).value], 'y':[(state.orbit.r[1] << u.km).value], 'z':[(state.orbit.r[2] << u.km).value],
+                           'vx':[(state.orbit.v[0] << u.km/u.second).value], 'vy':[(state.orbit.v[1] << u.km/u.second).value], 'vz':[(state.orbit.v[2] << u.km/u.second).value],
+                           'latitude':[state.latitude], 'longitude':[state.longitude], 'altitude':[state.altitude]})
+    return pd.concat([df, tempdf])
+
 
 def plot_ground_track(df):
-    img = plt.imread("Earth.jpg")
+    img = plt.imread("_resources/Earth.jpg")
     fig, ax = plt.subplots()
     ax.imshow(img, extent=[-180, 180, -90, 90])
     plt.scatter(np.array(df[df['longitude'] >= 0]['longitude']), np.array(df[df['longitude'] >= 0]['latitude']), color='yellow', s=0.5)
@@ -305,3 +317,35 @@ def plot_quaternion_error(df):
 
     plt.show()
 
+
+def plot_orbit_transfer(df):
+    
+    fig, ax = plt.subplots(2, 2)
+    
+    # generate plots for user
+    ax[0, 0].set_title('semimajor axis vs. time')
+    ax[0, 0].plot(df['time'], df['aT']-6371.8, 'k-', label='target semimajor axis (agl)')
+    ax[0, 0].plot(df['time'], df['a']-6371.8, label='semimajor axis (agl)')
+    ax[0, 0].set_xlabel('time (s)')
+    ax[0, 0].set_ylabel('semimajor axis (agl, km)')
+    ax[0, 0].legend()
+    ax[0, 0].grid()
+
+    ax[0, 1].set_title('eccentricity vs. time')
+    ax[0, 1].plot(df['time'], df['eT'], 'k-', label='target eccentricity')
+    ax[0, 1].plot(df['time'], df['e'], label='eccentricity')
+    ax[0, 1].set_xlabel('time (s)')
+    ax[0, 1].set_ylabel('eccentricity')
+    ax[0, 1].legend()
+    ax[0, 1].grid()
+
+    ax[1, 0].set_title('inclination vs. time')
+    ax[1, 0].plot(df['time'], df['iT'], 'k-', label='target inclination (deg)')
+    ax[1, 0].plot(df['time'], df['i'], label='inclination (deg)')
+    ax[1, 0].set_xlabel('time (s)')
+    ax[1, 0].set_ylabel('inclination (deg)')
+    ax[1, 0].legend()
+    ax[1, 0].grid()
+
+
+    plt.show()

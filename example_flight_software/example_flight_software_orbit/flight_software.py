@@ -6,6 +6,10 @@ from astropy import units as u
 import numpy as np
 
 
+def printout(str):
+    print('\033[0;32m  from flight_software.schedulerApp._update_user_variables():\n' + str + '\033[0m')
+
+
 class schedulerApp():
     # measurements class {#4f7, 9}
     class measured_state():
@@ -58,7 +62,7 @@ class schedulerApp():
                 outstr += '\033[0;31m\t--- warning: ' + arg + ' not recognized as defualt variable, no action taken\033[0;32m\n'
         
         outstr += '\n\t' + str(self._p)
-        print('\n\nscheduler:\n'+outstr)
+        printout('\n\nscheduler:\n'+outstr)
 
 
     def _write_command_to_thruster(self, command):
@@ -117,8 +121,8 @@ class schedulerApp():
         elif self.mode == 'transfer_1':
 
             if (self.state.orbit.a << u.meter).value > 0.9999*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.0001*self._p['aT']:
-                if (self.state.orbit.inc << u.radian).value > 0.9999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.0001*self._p['iT']:
-                    if self.state.orbit.ecc.value > 0.9999*self._p['eT'] and self.state.orbit.ecc.value < 1.0001*self._p['eT']:
+                if (self.state.orbit.inc << u.radian).value > 0.99999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.00001*self._p['iT']:
+                    if self.state.orbit.ecc.value > 0.99999*self._p['eT'] and self.state.orbit.ecc.value < 1.00001*self._p['eT']:
                         self._write_variables_to_state('hold_1')
                         self.t_crit = self.systemClock
 
@@ -137,8 +141,8 @@ class schedulerApp():
         elif self.mode == 'transfer_2':
 
             if (self.state.orbit.a << u.meter).value > 0.9999*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.0001*self._p['aT']:
-                if (self.state.orbit.inc << u.radian).value > 0.9999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.0001*self._p['iT']:
-                    if self.state.orbit.ecc.value > 0.9999*self._p['eT'] and self.state.orbit.ecc.value < 1.01*self._p['eT']:
+                if (self.state.orbit.inc << u.radian).value > 0.99999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.0001*self._p['iT']:
+                    if self.state.orbit.ecc.value > 0.9999*self._p['eT'] and self.state.orbit.ecc.value < 1.0001*self._p['eT']:
                         self._write_variables_to_state('hold_2')
                         self.t_crit = self.systemClock
 

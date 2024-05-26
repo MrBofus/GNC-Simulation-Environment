@@ -10,8 +10,8 @@ import numpy as np
 import copy
 import renderLighting as rl
 import sys
-sys.path.append("../GNC-Simulation-Environment")
-import quaternionMath as qm
+# sys.path.append("../GNC-Simulation-Environment")
+import quaternion_math.quaternionMath as qm
 
 
 # rotate stl mesh given a quaternion rotation

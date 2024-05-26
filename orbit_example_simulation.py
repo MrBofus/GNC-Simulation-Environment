@@ -6,11 +6,7 @@
 import gnc_core.gnc_library as gnc
 import numpy as np
 import pandas as pd
-import quaternion_math.quaternionMath as qm
 import time
-import random
-from astropy import units as u
-import matplotlib.pyplot as plt
 
 # import flight software
 import example_flight_software.example_flight_software_orbit.flight_software as fs
@@ -78,7 +74,7 @@ satellite_area = 0.5 * (satellite_x**2 + satellite_z**2)    # m^2
 # simulation parameters {#f91, 22}
 # simulation parameters
 
-# build the state handler for the simulation
+# build the state handler for the simulation (use special physics object for orbit-only simulation)
 state = gnc.satelliteState_orbit(satellite_orbit, satellite_mass, satellite_area)
 
 
@@ -86,7 +82,7 @@ state = gnc.satelliteState_orbit(satellite_orbit, satellite_mass, satellite_area
 physics_timestep = 3*60                 # seconds
 
 
-# maximum simulation time
+# maximum simulation time (this example will cut off early once target state is reached)
 simTime = 100*24*3600   # s
 
 
@@ -124,35 +120,29 @@ scheduler = fs.schedulerApp()
 scheduler._update_user_variables(f_mag = 330 * 10**-6)
 
 
-
-# `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
-# flight software begin {#467, 5}
-# begin flight software and update user variables if any
-
-
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
 # begin simulation
 
 print('\n')
 while t < simTime:
-    # add random disturbance torques
-    disturbanceTorque = (10**-7)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)]) # N
+    # add random disturbance forces
+    disturbanceForce = (10**-5)*np.array([np.random.uniform(-1, 1), np.random.uniform(-1, 1), np.random.uniform(-1, 1)]) # N
 
     # propagate posiition one timestep
     state.propagatePosition(thrust, disturbanceForce, physics_timestep)
     
 
 
+    # iterate flight software one timestep
     scheduler._iterate(state)
+    
+    # pass command to thruster from flight software
     thrust = scheduler.thruster_command
 
 
 
     # append variables to dataframe to monitor results
-    tempdf = pd.DataFrame({'t':[t], 'a':[(state.orbit.a << u.km).value],
-                           'e':[state.orbit.ecc.value], 'i':[(state.orbit.inc << u.deg).value],
-                           'aT':[scheduler._p['aT']/10**3], 'eT':[scheduler._p['eT']], 'iT':[scheduler._p['iT']*180/np.pi]})
-    df = pd.concat([df, tempdf])
+    df = gnc.appendDataFrame_orbit(df, state, scheduler, t)
     
     # update user about simulation status
     if counter%1000 == 0:
@@ -162,6 +152,7 @@ while t < simTime:
     counter += 1
     t += physics_timestep
 
+    # if target state is reached early, go ahead and end simulation
     if scheduler.mode == 'exit':
         break
 
@@ -172,27 +163,8 @@ t_to_finish = time.monotonic()
 # display time to finish simulation
 print('\nsimulation took ' + str(round((t_to_finish-t_to_start) / 60, 1)) + ' minutes')
 
-# generate plots for user
-plt.figure(1)
-plt.title('altitude vs. time')
-plt.plot(df['t'], df['aT']-6371.8, 'k-')
-plt.plot(df['t'], df['a']-6371.8)
-plt.grid()
-
-plt.figure(2)
-plt.title('eccentricity vs. time')
-plt.plot(df['t'], df['eT'], 'k-')
-plt.plot(df['t'], df['e'])
-plt.grid()
-
-plt.figure(3)
-plt.title('inclination vs. time')
-plt.plot(df['t'], df['iT'], 'k-')
-plt.plot(df['t'], df['i'])
-plt.grid()
-
-
-plt.show()
+# show results of simulation
+gnc.plot_orbit_transfer(df)
 
 # write results to csv for future analysis
 df.to_csv('_out/simulation_results.txt')

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import math
 import numpy as np
 import copy
-import renderLighting as rl
+import animation_core.renderLighting as rl
 import sys
 # sys.path.append("../GNC-Simulation-Environment")
 import quaternion_math.quaternionMath as qm

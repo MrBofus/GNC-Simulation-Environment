@@ -7,7 +7,7 @@ import numpy as np
 
 
 def printout(str):
-    print('\033[0;32m  from flight_software.schedulerApp._update_user_variables():\n' + str + '\033[0m')
+    print('\n\n\033[0;32m  from flight_software.schedulerApp._update_user_variables():\n' + str + '\033[0m')
 
 
 class schedulerApp():
@@ -62,7 +62,7 @@ class schedulerApp():
                 outstr += '\033[0;31m\t--- warning: ' + arg + ' not recognized as defualt variable, no action taken\033[0;32m\n'
         
         outstr += '\n\t' + str(self._p)
-        printout('\n\nscheduler:\n'+outstr)
+        printout(outstr)
 
 
     def _write_command_to_thruster(self, command):
@@ -132,7 +132,7 @@ class schedulerApp():
         elif self.mode == 'hold_1':
 
             if self.systemClock > self.t_crit + 2* (24*3600)/(3*60):
-                self._write_variables_to_state('transfer_2')
+                self._write_variables_to_state('exit')
                 self._update_user_variables(aT=self._p['aT']+200000, Wa=15, We=1, Wi=1)
                 
                 pass

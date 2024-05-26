@@ -1,4 +1,5 @@
-import animation_core.visualizer as ac
+from animation_core.visualizer import runVisualizer
+from animation_core.visualizer_orbit import runVisualizer_orbit
 import numpy as np
 import pandas as pd
 
@@ -16,10 +17,10 @@ if 'type' in df.columns:
             rlist.append(np.array([ df['x'].iloc[i], df['y'].iloc[i], df['z'].iloc[i] ]))
             vlist.append(np.array([ df['vx'].iloc[i], df['vy'].iloc[i], df['vz'].iloc[i] ]))
 
-        ac.runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)
+        runVisualizer(qlist, rlist, vlist, 0.01, buff_amt=100)
 
     elif df['type'].iloc[1] == 'orbit':
-        pass
+        runVisualizer_orbit(df, 0.01, buff_amt=500, scale=10000)
 
     else:
         print('unexpected simulation type, idk what to do with this??')

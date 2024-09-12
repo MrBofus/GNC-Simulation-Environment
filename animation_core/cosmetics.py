@@ -7,7 +7,7 @@ def interpolate_between_colors(color1, color2, i):
 
 def plot_with_gradient(axes, c1, c2,
                        x, y, z,
-                       gap, linewidth, gradient):
+                       gap, linewidth, gradient, skip_step):
     '''
     for i in range(1, len(x)):
         colorcode = [ 1 - abs(t[i-1]/max(t)), 
@@ -35,6 +35,6 @@ def plot_with_gradient(axes, c1, c2,
 
         colorcode = interpolate_between_colors(c1, c2, iterator)
 
-        axes.plot(x[i-1:i+gap], y[i-1:i+gap], z[i-1:i+gap], c=colorcode, linewidth=linewidth, alpha=gradient)
+        axes.plot(x[i-1:i+gap][::skip_step], y[i-1:i+gap][::skip_step], z[i-1:i+gap][::skip_step], c=colorcode, linewidth=linewidth, alpha=gradient)
 
 

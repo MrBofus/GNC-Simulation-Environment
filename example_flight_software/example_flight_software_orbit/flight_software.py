@@ -91,10 +91,11 @@ class schedulerApp():
     def _run_guidance(self):
         if self.mode == 'init':
             self.setpoint = np.array([0, 0, 0])
+            self.err = 0
             pass
         
         else:
-            gvec, _ = solveQLaw(self.state.orbit, self._p['Wp'], self._p['rp_min'], self._p['f_mag'],
+            gvec, q_dot = solveQLaw(self.state.orbit, self._p['Wp'], self._p['rp_min'], self._p['f_mag'],
                                     self._p['Wa'], self._p['We'], self._p['Wi'], self._p['Wraan'], self._p['Wargp'],
                                     self._p['aT'], self._p['eT'], self._p['iT'], self._p['raanT'], self._p['argpT'])
         
@@ -107,6 +108,7 @@ class schedulerApp():
                           r_mag[2]*gvec[0] + v_mag[2]*gvec[1] + h_mag[2]*gvec[2]]
         
             self.setpoint = np.array(gvec_local)
+            self.err = q_dot
 
 
     def _run_navigation(self):
@@ -123,6 +125,7 @@ class schedulerApp():
             if (self.state.orbit.a << u.meter).value > 0.9999*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.0001*self._p['aT']:
                 if (self.state.orbit.inc << u.radian).value > 0.99999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.00001*self._p['iT']:
                     if self.state.orbit.ecc.value > 0.99999*self._p['eT'] and self.state.orbit.ecc.value < 1.00001*self._p['eT']:
+                        printout('transfer 1 complete, holding...')
                         self._write_variables_to_state('hold_1')
                         self.t_crit = self.systemClock
 
@@ -132,8 +135,10 @@ class schedulerApp():
         elif self.mode == 'hold_1':
 
             if self.systemClock > self.t_crit + 2* (24*3600)/(3*60):
-                self._write_variables_to_state('exit')
-                self._update_user_variables(aT=self._p['aT']+200000, Wa=15, We=1, Wi=1)
+                # self._write_variables_to_state('exit')
+                printout('hold complete, beginning transfer 2...')
+                self._update_user_variables(aT=self._p['aT']-120*10**3, Wa=-10, We=10)
+                self.mode = 'transfer_2'
                 
                 pass
             pass
@@ -143,6 +148,7 @@ class schedulerApp():
             if (self.state.orbit.a << u.meter).value > 0.9999*self._p['aT'] and (self.state.orbit.a << u.meter).value < 1.0001*self._p['aT']:
                 if (self.state.orbit.inc << u.radian).value > 0.99999*self._p['iT'] and (self.state.orbit.inc << u.radian).value < 1.0001*self._p['iT']:
                     if self.state.orbit.ecc.value > 0.9999*self._p['eT'] and self.state.orbit.ecc.value < 1.0001*self._p['eT']:
+                        printout('transfer 2 complete, holding...')
                         self._write_variables_to_state('hold_2')
                         self.t_crit = self.systemClock
 

@@ -10,8 +10,52 @@ import copy
 import pyIGRF
 import quaternion_math.quaternionMath as qm
 
+import warnings
+warnings.filterwarnings('ignore')
+
 from gnc_core.hardware_models.reaction_wheel import reactionWheelAssembly
 from gnc_core.hardware_models.magnetorquers import magnetorquerAssembly
+
+import numba as nb
+
+@nb.jit(nopython=True)
+def _fast_integrator(controlTorque, disturbanceTorque, angularRate, quaternion, I, dt):
+    
+    w1 = angularRate[0]
+    w2 = angularRate[1]
+    w3 = angularRate[2]
+    
+    q1 = quaternion[0]
+    q2 = quaternion[1]
+    q3 = quaternion[2]
+    q4 = quaternion[3]
+    
+    omega_dot_1 = (1/I[0]) * ( (I[2] - I[1])*w2*w3 - (controlTorque[0] + disturbanceTorque[0]) )
+    omega_dot_2 = (1/I[1]) * ( (I[0] - I[2])*w3*w1 - (controlTorque[1] + disturbanceTorque[1]) )
+    omega_dot_3 = (1/I[2]) * ( (I[1] - I[0])*w1*w2 - (controlTorque[2] + disturbanceTorque[2]) )
+    
+    w1_new = w1 + omega_dot_1*dt
+    w2_new = w2 + omega_dot_2*dt
+    w3_new = w3 + omega_dot_3*dt
+    
+    w1_avg = 0.5 * (w1 + w1_new)
+    w2_avg = 0.5 * (w2 + w2_new)
+    w3_avg = 0.5 * (w3 + w3_new)
+    
+    q = qm.quaternionIntegral([q1, q2, q3, q4], [w1_avg, w2_avg, w3_avg], dt)
+    
+    angularRate[0] = w1_new
+    angularRate[1] = w2_new
+    angularRate[2] = w3_new
+    
+    quaternion[0] = q[0]
+    quaternion[1] = q[1]
+    quaternion[2] = q[2]
+    quaternion[3] = q[3]
+    
+    return angularRate, quaternion, controlTorque, disturbanceTorque
+
+
 
 class satelliteState():
     def __init__(self, satellite_orbit, moment_of_inertia, satellite_mass,
@@ -45,47 +89,14 @@ class satelliteState():
         
     def propagateAttitude(self, controlTorque, disturbanceTorque, dt):
         
-        self.controlTorque = controlTorque
-        self.disturbanceTorque = disturbanceTorque
-        
-        w1 = copy.deepcopy(self.angularRate[0])
-        w2 = copy.deepcopy(self.angularRate[1])
-        w3 = copy.deepcopy(self.angularRate[2])
-        
-        q1 = copy.deepcopy(self.quaternion[0])
-        q2 = copy.deepcopy(self.quaternion[1])
-        q3 = copy.deepcopy(self.quaternion[2])
-        q4 = copy.deepcopy(self.quaternion[3])
-        
-        omega_dot_1 = (1/self.I[0]) * ( (self.I[2] - self.I[1])*w2*w3 - (controlTorque[0] + disturbanceTorque[0]) )
-        omega_dot_2 = (1/self.I[1]) * ( (self.I[0] - self.I[2])*w3*w1 - (controlTorque[1] + disturbanceTorque[1]) )
-        omega_dot_3 = (1/self.I[2]) * ( (self.I[1] - self.I[0])*w1*w2 - (controlTorque[2] + disturbanceTorque[2]) )
-        
-        w1_new = w1 + omega_dot_1*dt
-        w2_new = w2 + omega_dot_2*dt
-        w3_new = w3 + omega_dot_3*dt
-        
-        w1_avg = 0.5 * (w1 + w1_new)
-        w2_avg = 0.5 * (w2 + w2_new)
-        w3_avg = 0.5 * (w3 + w3_new)
-        
-        q = qm.quaternionIntegral([q1, q2, q3, q4], [w1_avg, w2_avg, w3_avg], dt)
-        
-        self.angularRate[0] = w1_new
-        self.angularRate[1] = w2_new
-        self.angularRate[2] = w3_new
-        
-        self.quaternion[0] = q[0]
-        self.quaternion[1] = q[1]
-        self.quaternion[2] = q[2]
-        self.quaternion[3] = q[3]
+        self.angularRate, self.quaternion, self.controlTorque, self.disturbanceTorque = _fast_integrator(controlTorque, disturbanceTorque, self.angularRate, self.quaternion, self.I, dt)
 
 
         B_true = pyIGRF.igrf_value(self.latitude, self.longitude, self.altitude/10**3, 2024)
         B_true = (10**-9)*np.array( [B_true[3], B_true[4], B_true[5], 0] )
 
 
-        B_body = qm.quaternionMultiply( qm.quaternionMultiply(q, B_true), qm.conjugate(q) )
+        B_body = qm.quaternionMultiply( qm.quaternionMultiply(self.quaternion, B_true), qm.conjugate(self.quaternion) )
         self.B_true = np.array([ B_true[0], B_true[1], B_true[2] ])
         self.B_body = qm.magnitude(B_true) * np.array([ B_body[0], B_body[1], B_body[2] ])
 
@@ -204,7 +215,26 @@ def appendDataFrame_orbit(df, state, scheduler, t):
                            'aT':[scheduler._p['aT']/10**3], 'eT':[scheduler._p['eT']], 'iT':[scheduler._p['iT']*180/np.pi],
                            'x':[(state.orbit.r[0] << u.km).value], 'y':[(state.orbit.r[1] << u.km).value], 'z':[(state.orbit.r[2] << u.km).value],
                            'vx':[(state.orbit.v[0] << u.km/u.second).value], 'vy':[(state.orbit.v[1] << u.km/u.second).value], 'vz':[(state.orbit.v[2] << u.km/u.second).value],
-                           'latitude':[state.latitude], 'longitude':[state.longitude], 'altitude':[state.altitude]})
+                           'latitude':[state.latitude], 'longitude':[state.longitude], 'altitude':[state.altitude],
+                           'q_dot':[scheduler.err]})
+    return pd.concat([df, tempdf])
+
+def appendDataFrame_spec(df, state, t, error):
+    tempdf = pd.DataFrame({'type':['attitude'],
+                           'time':[t], 
+                           'Mx':[state.controlTorque[0]], 'My':[state.controlTorque[1]], 'Mz':[state.controlTorque[2]],
+                           'Fx':[state.controlForce[0]], 'Fy':[state.controlForce[1]], 'Fz':[state.controlForce[2]],
+                           'wx':[state.angularRate[0]], 'wy':[state.angularRate[1]], 'wz':[state.angularRate[2]],
+                           'q1':[state.quaternion[0]], 'q2':[state.quaternion[1]], 'q3':[state.quaternion[2]], 'q4':[state.quaternion[3]],
+                           'q1e':[error[0]], 'q2e':[error[1]], 'q3e':[error[2]], 'q4e':[error[3]],
+                           'a':[state.orbit.a.value], 'e':[state.orbit.ecc.value], 'i':[state.orbit.inc.value], 
+                           'raan':[state.orbit.raan.value], 'argp':[state.orbit.argp.value], 'nu':[state.orbit.nu.value],
+                           'x':[(state.orbit.r[0] << u.km).value], 'y':[(state.orbit.r[1] << u.km).value], 'z':[(state.orbit.r[2] << u.km).value],
+                           'vx':[(state.orbit.v[0] << u.km/u.second).value], 'vy':[(state.orbit.v[1] << u.km/u.second).value], 'vz':[(state.orbit.v[2] << u.km/u.second).value],
+                           'Bbx':[state.B_body[0]], 'Bby':[state.B_body[1]], 'Bbz':[state.B_body[2]],
+                           'Btx':[state.B_true[0]], 'Bty':[state.B_true[1]], 'Btz':[state.B_true[2]],
+                           'latitude':[state.latitude], 'longitude':[state.longitude], 'altitude':[state.altitude]
+                           })
     return pd.concat([df, tempdf])
 
 
@@ -346,6 +376,66 @@ def plot_orbit_transfer(df):
     ax[1, 0].set_ylabel('inclination (deg)')
     ax[1, 0].legend()
     ax[1, 0].grid()
+    
+    ax[1, 1].set_title('error vs. time')
+    ax[1, 1].plot(df['time'], df['q_dot'], 'k-', label='error')
+    ax[1, 1].set_xlabel('time (s)')
+    ax[1, 1].set_ylabel('error (unitless)')
+    ax[1, 1].legend()
+    ax[1, 1].grid()
 
+
+    plt.show()
+
+def plot_spec(df):
+    t = np.array( df['time'] )
+    
+    q1e = np.array( df['q1e'] )
+    q2e = np.array( df['q2e'] )
+    q3e = np.array( df['q3e'] )
+    q4e = np.array( df['q4e'] )
+    
+
+    ################
+
+    plt.figure(1)
+    plt.plot(t, q1e, label='q1e')
+    plt.plot(t, q2e, label='q2e')
+    plt.plot(t, q3e, label='q3e')
+    plt.plot(t, q4e, label='q4e')
+    
+    plt.grid()
+    plt.legend()
+    
+    plt.xlabel('time (s)')
+    plt.ylabel('quaternion error')
+
+    ################
+
+    plt.figure(2)
+    plt.plot(t, df['Mx'], label='control torque (x)')
+    plt.plot(t, df['My'], label='control torque (y)')
+    plt.plot(t, df['Mz'], label='control torque (z)')
+    
+    plt.grid()
+    plt.legend()
+    
+    plt.xlabel('time (s)')
+    plt.ylabel('control torque (N-m)')
+
+    ################
+
+    plt.figure(3)
+    plt.plot(t, df['wx'], label='wx')
+    plt.plot(t, df['wy'], label='wy')
+    plt.plot(t, df['wz'], label='wz')
+    
+    plt.grid()
+    plt.legend()
+    
+    plt.xlabel('time (s)')
+    plt.ylabel('angular rate (rad/s)')
+
+    ################
 
     plt.show()

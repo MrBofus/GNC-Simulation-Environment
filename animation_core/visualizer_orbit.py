@@ -8,16 +8,18 @@ import matplotlib.pyplot as plt
 import math
 import numpy as np
 import copy
+
+import sys
+sys.path.append("../GNC-Simulation-Environment")
+
 import animation_core.renderLighting as rl
 from animation_core.cosmetics import plot_with_gradient
-import sys
-# sys.path.append("../GNC-Simulation-Environment")
 import quaternion_math.quaternionMath as qm
 
 
 # execute the mesh update on the plot to animate stl motion
 # --> each time this runs it's like one "frame" of animation
-def handleUpdate(df, ax, ax_a, ax_e, ax_i, index: int, scale: int):
+def handleUpdate(df, ax, ax_a, ax_e, ax_i, index: int, scale: int, skip_step: int, dt: float):
     # clear current plot of any graphics
     ax.clear()
     ax_a.clear()
@@ -25,46 +27,46 @@ def handleUpdate(df, ax, ax_a, ax_e, ax_i, index: int, scale: int):
     ax_i.clear()
     
     # update title (example, not needed)
-    ax.set_title('t = ' + str(round(df['time'].iloc[index]/(3600*24), 1)) + ' days')
-
+    # ax.set_title('t = ' + str(round(df['time'].iloc[index]/(3600*24), 1)) + ' days')
+    ax.set_title('frames: ' + str(round(1/dt, 1)) + 'fps')
 
     # ax.plot(df['x'].tail(index), df['y'].tail(index), df['z'].tail(index))
     plot_with_gradient(ax, [0.2, 0.2, 1.0], [0.1, 0.1, 0.5], 
                        df['x'].iloc[:index], df['y'].iloc[:index], df['z'].iloc[:index],
-                       int(index/10 + 1), 1, 1)
+                       int(index/10 + 1), 1, 1, 1)
     
     
     ammount = 20000
     if index < ammount:
         ax_a.set_title('semimajor axis (km)')
-        ax_a.plot(df['time'].iloc[:index], df['a'].iloc[:index]-6378.1)
-        ax_a.plot(df['time'].iloc[:index], df['aT'].iloc[:index]-6378.1, 'k-')
+        ax_a.plot(df['time'].iloc[:index][::skip_step], df['a'].iloc[:index][::skip_step]-6378.1)
+        ax_a.plot(df['time'].iloc[:index][::skip_step], df['aT'].iloc[:index][::skip_step]-6378.1, 'k-')
         ax_a.grid()
         
         ax_e.set_title('eccentricity')
-        ax_e.plot(df['time'].iloc[:index], df['e'].iloc[:index])
-        ax_e.plot(df['time'].iloc[:index], df['eT'].iloc[:index], 'k-')
+        ax_e.plot(df['time'].iloc[:index][::skip_step], df['e'].iloc[:index][::skip_step])
+        ax_e.plot(df['time'].iloc[:index][::skip_step], df['eT'].iloc[:index][::skip_step], 'k-')
         ax_e.grid()
         
         ax_i.set_title('inclination (deg)')
-        ax_i.plot(df['time'].iloc[:index], df['i'].iloc[:index])
-        ax_i.plot(df['time'].iloc[:index], df['iT'].iloc[:index], 'k-')
+        ax_i.plot(df['time'].iloc[:index][::skip_step], df['i'].iloc[:index][::skip_step])
+        ax_i.plot(df['time'].iloc[:index][::skip_step], df['iT'].iloc[:index][::skip_step], 'k-')
         ax_i.grid()
     
     else:
         ax_a.set_title('semimajor axis (km)')
-        ax_a.plot(df['time'].iloc[(index-ammount):index], df['a'].iloc[(index-ammount):index]-6378.1)
-        ax_a.plot(df['time'].iloc[(index-ammount):index], df['aT'].iloc[(index-ammount):index]-6378.1, 'k-')
+        ax_a.plot(df['time'].iloc[(index-ammount):index][::skip_step], df['a'].iloc[(index-ammount):index][::skip_step]-6378.1)
+        ax_a.plot(df['time'].iloc[(index-ammount):index][::skip_step], df['aT'].iloc[(index-ammount):index][::skip_step]-6378.1, 'k-')
         ax_a.grid()
         
         ax_e.set_title('eccentricity')
-        ax_e.plot(df['time'].iloc[(index-ammount):index], df['e'].iloc[(index-ammount):index])
-        ax_e.plot(df['time'].iloc[(index-ammount):index], df['eT'].iloc[(index-ammount):index], 'k-')
+        ax_e.plot(df['time'].iloc[(index-ammount):index][::skip_step], df['e'].iloc[(index-ammount):index][::skip_step])
+        ax_e.plot(df['time'].iloc[(index-ammount):index][::skip_step], df['eT'].iloc[(index-ammount):index][::skip_step], 'k-')
         ax_e.grid()
         
         ax_i.set_title('inclination (deg)')
-        ax_i.plot(df['time'].iloc[(index-ammount):index], df['i'].iloc[(index-ammount):index])
-        ax_i.plot(df['time'].iloc[(index-ammount):index], df['iT'].iloc[(index-ammount):index], 'k-')
+        ax_i.plot(df['time'].iloc[(index-ammount):index][::skip_step], df['i'].iloc[(index-ammount):index][::skip_step])
+        ax_i.plot(df['time'].iloc[(index-ammount):index][::skip_step], df['iT'].iloc[(index-ammount):index][::skip_step], 'k-')
         ax_i.grid()
     
     ax_a.set_ylim([min(df['a'])-6378.1-100, max(df['a'])-6378.1+100])
@@ -94,8 +96,13 @@ def runVisualizer_orbit(df, pause_amount: float, **kwargs):
     if 'scale' in kwargs.keys():
         scale = kwargs['scale']
     else:
-        scale = 100
+        scale = 10000
 
+    if 'skip_step' in kwargs.keys():
+        skip_step = kwargs['skip_step']
+    else:
+        skip_step = 10
+        
     # Create a new plot
     figure = plt.figure()
     # figure.set_facecolor('black')
@@ -110,10 +117,20 @@ def runVisualizer_orbit(df, pause_amount: float, **kwargs):
     ax_eccentricity.set_title('eccentricity')
     ax_inclination.set_title('inclination (deg)')
 
+    import time
+    dt = 0.001
+    
     for t in range(len(df)):
         if t%buffer_amount == 0:
-            handleUpdate(df, ax_3d, ax_altitude, ax_eccentricity, ax_inclination, t, scale)
+            
+            t_to_start = time.monotonic()
+            
+            handleUpdate(df, ax_3d, ax_altitude, ax_eccentricity, ax_inclination, t, scale, skip_step, dt)
             plt.pause(pause_amount)
+            
+            t_to_finish = time.monotonic()
+            
+            dt = t_to_finish - t_to_start
     
     plt.show()
 
@@ -121,6 +138,6 @@ def runVisualizer_orbit(df, pause_amount: float, **kwargs):
 if __name__ == "__main__":
     import pandas as pd
 
-    df = pd.read_csv( '_out/simulation_results.txt' )
+    df = pd.read_csv( '_out/simulation_results_orbit.txt' )
 
     runVisualizer_orbit(df, 0.01, buff_amt=100)

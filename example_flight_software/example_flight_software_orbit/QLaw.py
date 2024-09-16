@@ -72,7 +72,6 @@ def return_Q_partials(orbit, Wp, rp_min, f_mag,
     
     da_dot_xx_da =  6*f_mag*( (a**2 * (1 + e)) / (mu * (1 - e)) )
     dVa_da =        ( (2/(3*aT)) * (term2**3) * (1 + term2**4)**(-1/2) ) * da**2 + 2*S*da*( (a_dot_xx - (a-aT)*da_dot_xx_da) / a_dot_xx**2 )
-    
     dV_da =         dVa_da
     
     dQ_da =         Wp*dP_da*Wa*Va + (1+Wp*P)*Wa*dV_da

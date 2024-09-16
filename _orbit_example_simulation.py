@@ -116,8 +116,10 @@ t = 0
 # flight software begin {#467, 5}
 # begin flight software and update user variables if any
 
-scheduler = fs.schedulerApp()
-scheduler._update_user_variables(f_mag = 330 * 10**-6, aT=(565 + 6378.1)*10**3, iT=(51.8*np.pi/180))
+scheduler = fs.schedulerApp(timestep=physics_timestep)
+scheduler._update_user_variables(f_mag = 330 * 10**-6, 
+                                 aT=(565 + 6378.1) * 10**3, 
+                                 iT=(51.6*np.pi/180))
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #

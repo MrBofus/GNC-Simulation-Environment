@@ -31,7 +31,7 @@ def handleUpdate(df, ax, ax_a, ax_e, ax_i, index: int, scale: int, skip_step: in
     ax.set_title('frames: ' + str(round(1/dt, 1)) + 'fps')
 
     # ax.plot(df['x'].tail(index), df['y'].tail(index), df['z'].tail(index))
-    plot_with_gradient(ax, [0.2, 0.2, 1.0], [0.1, 0.1, 0.5], 
+    plot_with_gradient(ax, [0.2, 0.2, 1.0], [0.5, 0.1, 0.1], 
                        df['x'].iloc[:index], df['y'].iloc[:index], df['z'].iloc[:index],
                        int(index/10 + 1), 1, 1, 1)
     
@@ -140,4 +140,4 @@ if __name__ == "__main__":
 
     df = pd.read_csv( '_out/simulation_results_orbit.txt' )
 
-    runVisualizer_orbit(df, 0.01, buff_amt=100)
+    runVisualizer_orbit(df, 0.01, buff_amt=100, scale=5000)

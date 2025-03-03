@@ -1,4 +1,5 @@
 /tempfiles
 /flightsoftware_core
 *_legacy.py
+*debug.py
 temp.py

@@ -140,4 +140,4 @@ if __name__ == "__main__":
 
     df = pd.read_csv( '_out/simulation_results_orbit.txt' )
 
-    runVisualizer_orbit(df, 0.01, buff_amt=100, scale=5000)
+    runVisualizer_orbit(df, 0.01, buff_amt=100, scale=12000)

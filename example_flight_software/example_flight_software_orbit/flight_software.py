@@ -30,7 +30,7 @@ class schedulerApp():
         self.defaults = {
 
                         'Wp':1,
-                        'rp_min':400000,
+                        'rp_min':(400000 + 6378.1) * 10**3,
 
                         'f_mag':330 * 10**-6,
 
@@ -40,7 +40,7 @@ class schedulerApp():
                         'Wraan':0,
                         'Wargp':0,
 
-                        'aT':(530+6378.1)*10**3,
+                        'aT':(530 + 6378.1)*10**3,
                         'eT':0.001,
                         'iT':51.9 * np.pi/180,
                         'raanT':0,
@@ -145,7 +145,7 @@ class schedulerApp():
         elif self.mode == 'hold_1':
 
             if self.systemClock > self.t_crit + self._p['hold_1_window']:
-                # self._write_variables_to_state('exit')
+                self._write_variables_to_state('exit') ##################################
                 printout('hold complete, beginning transfer 2...')
                 self._update_user_variables(aT=self._p['aT'] + 120*10**3, 
                                             iT=self._p['iT'] + 0.1*np.pi/180)

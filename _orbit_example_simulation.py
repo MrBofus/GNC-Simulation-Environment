@@ -120,6 +120,14 @@ scheduler = fs.schedulerApp(timestep=physics_timestep)
 scheduler._update_user_variables(f_mag = 330 * 10**-6, 
                                  aT=(565 + 6378.1) * 10**3, 
                                  iT=(51.6*np.pi/180))
+# scheduler._update_user_variables(
+#                                  f_mag=330 * 10**-6, 
+#                                  
+#                                  aT=(26600 + 6378.1) * 10**3, 
+#                                  iT=(63.4*np.pi/180),
+#                                  eT=0.74,         
+#                                  argpT=(270*np.pi/180),
+#                                  )
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #

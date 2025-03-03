@@ -1,5 +1,6 @@
 import numpy as np
 import numba as nb
+from scipy.spatial.transform import Rotation as R
 
 @nb.jit(nopython=True)
 def magnitude(vec):
@@ -21,6 +22,7 @@ def normalize(vec):
     
     return v_
 
+
 @nb.jit(nopython=True)
 def quaternionDifference(q1, q2):
     # https://math.stackexchange.com/questions/1782243/how-to-calculate-rotation-quaternion-between-two-orientation-quaternions
@@ -34,6 +36,7 @@ def quaternionDifference(q1, q2):
     delta_z = w1*z2 + w2*z1 - x1*y2 + x2*y1
     
     return normalize( [ delta_x, delta_y, delta_z, delta_w ] )
+
 
 @nb.jit(nopython=True)
 def conjugate(q):
@@ -80,6 +83,11 @@ def axis_to_quaternion(axis, rotation):
                                  axis[2]*np.sin(rotation/2),
                                  np.cos(rotation/2) ]) )
 
+
+def quaternion_to_axis(quaternion):
+    rotation = R.from_quat(quaternion)
+    return rotation.apply([0, 0, 1])
+
 @nb.jit(nopython=True)
 def dcm_to_quaternion(dcm):
     q1 = np.sqrt( 0.25*abs( 1 + dcm[0][0] - dcm[1][1] - dcm[2][2] ) )
@@ -115,6 +123,7 @@ def dcm_to_quaternion(dcm):
 
         return normalize( np.array([q1, q2, q3, q4]) )
 
+
 def quaternion2euler(quaternion):
     qw, qx, qy, qz = quaternion[3], quaternion[0], quaternion[1], quaternion[2]
 
@@ -124,6 +133,7 @@ def quaternion2euler(quaternion):
 
     return phi, theta, psi
 
+
 @nb.jit(nopython=True)
 def orthogonalize(v, u):
     v = np.array(normalize(v))
@@ -132,6 +142,7 @@ def orthogonalize(v, u):
     proj_v_onto_u = ( np.dot(v, u)/np.dot(u, u) ) * u
 
     return normalize( v - proj_v_onto_u )
+
 
 @nb.jit(nopython=True)
 def az_el_from_basis_vectors(basis1, basis2, basis3):

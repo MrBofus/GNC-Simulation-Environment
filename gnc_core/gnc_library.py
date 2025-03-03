@@ -188,7 +188,7 @@ def ECEF_to_ECI(lla, t):
 
     
 
-def appendDataFrame(df, state, t, error, rwheel):
+def appendDataFrame(df, state, t, scheduler, error, rwheel):
     tempdf = pd.DataFrame({'type':['attitude'],
                            'time':[t], 
                            'Mx':[state.controlTorque[0]], 'My':[state.controlTorque[1]], 'Mz':[state.controlTorque[2]],
@@ -203,7 +203,9 @@ def appendDataFrame(df, state, t, error, rwheel):
                            'vx':[(state.orbit.v[0] << u.km/u.second).value], 'vy':[(state.orbit.v[1] << u.km/u.second).value], 'vz':[(state.orbit.v[2] << u.km/u.second).value],
                            'Bbx':[state.B_body[0]], 'Bby':[state.B_body[1]], 'Bbz':[state.B_body[2]],
                            'Btx':[state.B_true[0]], 'Bty':[state.B_true[1]], 'Btz':[state.B_true[2]],
-                           'latitude':[state.latitude], 'longitude':[state.longitude], 'altitude':[state.altitude]
+                           'latitude':[state.latitude], 'longitude':[state.longitude], 'altitude':[state.altitude],
+                           'aT':[scheduler._p['aT']/10**3], 'eT':[scheduler._p['eT']], 'iT':[scheduler._p['iT']*180/np.pi],
+                           'q_dot':[scheduler.q_dot]
                            })
     return pd.concat([df, tempdf])
 

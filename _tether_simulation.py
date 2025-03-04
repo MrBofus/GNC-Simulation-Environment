@@ -94,13 +94,13 @@ state = gnc.satelliteState(satellite_orbit, moment_of_inertia, satellite_mass,
 
 
 # timestep to run physics simulation
-physicsHz = 5             # Hz
+physicsHz = 20             # Hz
 
 # timestep to run flight software
-flightSoftwareHz = 1      # Hz
+flightSoftwareHz = 5      # Hz
 
 # total simulation time
-simTime = 100*state.orbit.period.value   # s
+simTime = 30*24*3600   # s
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -143,8 +143,8 @@ magnetorquerAssembly = gnc.magnetorquerAssembly(n_turns, length, width, max_curr
 #
 # https://www.enpulsion.com/order/enpulsion-nano/
 
-thrust_magnitude = 330 * 10**-3 # N # 10**-6 normally
-propellant_mass = 220 * 10**-3 # kg
+thrust_magnitude = 330 * 10**-6 # N
+propellant_mass = 220 * 10**-3  # kg
 
 power_consumption_idle = 8      # W
 power_consumption_active = 40   # W
@@ -170,8 +170,8 @@ t = 0
 # begin flight software and update user variables if any
 
 scheduler = fs.schedulerApp()
-scheduler._update_user_variables(bDot_gain=10**5, smc_ki=0.001, smc_kp=0.003, smc_kd=0.015, gs_range=0,
-                                 rg_noise=0, rg_bias=0, st_noise=0, mg_noise=0, gps_noise_r=0, gps_noise_v=0,)
+scheduler._update_user_variables(bDot_gain=10**5, smc_kp=0.003, smc_kd=0.015, gs_range=0,
+                                 rg_noise=0, rg_bias=0, st_noise=0, mg_noise=0, gps_noise_r=0, gps_noise_v=0)
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -212,18 +212,16 @@ while t < simTime:
     # consolidate physical influences
     controlTorque = copy.deepcopy(reactionWheelAssembly.wheel_torques) + copy.deepcopy(magnetorquerAssembly.torque)
     # determine thrust
-    thrust = scheduler.thruster_command * qm.quaternion_to_axis(state.quaternion)
+    if scheduler.thruster_command > 0:
+        thrust = scheduler.thruster_command * np.array([scheduler.setpoint[0], scheduler.setpoint[1], scheduler.setpoint[2]]) # qm.quaternion_to_axis(state.quaternion)
 
 
     # append variables to dataframe to monitor results
     df = gnc.appendDataFrame(df, state, t, scheduler, scheduler.q_error, reactionWheelAssembly)
     
     # update user about simulation status
-    if counter%1000 == 0:
-        print('\r', str(int(100*t/simTime)) + '% complete         ' , end='')
-    
-    if t > 4*state.orbit.period.value:
-        break
+    if counter%1000 == 0: print('\r', str(int(100*t/simTime)) + '% complete -- (w is ' + str(round(qm.magnitude(state.angularRate), 4)) + 
+                                ', a is ' + str(state.orbit.a.value) + ')        ' , end='')
 
     # advance counter and simulation time
     counter += 1

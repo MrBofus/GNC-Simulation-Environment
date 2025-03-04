@@ -24,31 +24,63 @@ class schedulerApp():
     def __init__(self):
         self._p = {}
         self.m = self.measured_state()
+        self.q_dot = 0
         self.systemClock = 0
 
 
     # user-defined variables {#121, 31}
     def _update_user_variables(self, **kwargs):
+        if 'timestep' in kwargs: dt=kwargs['timestep']
+        else: dt = 3*60
+        
         defaults = {
-                    'bDot_gain':0.1,
+                    # ````````````````````````````````````````
+                    # defualts for sensors
+                    'bDot_gain':0.1, # gain for the b-dot controller for detumble
             
-                    'smc_kp':1.0,
-                    'smc_kd':10.0,
-                    'smc_sigma':0.1,
-                    'smc_order':3,
+                    'smc_kp':1.0,    # p-gain for the sliding-mode controller, for pointing with wheels
+                    'smc_kd':10.0,   # d-gain for the sliding-mode controller, for pointing with wheels
+                    'smc_sigma':0.1, # window for sliging mode controller
+                    'smc_order':3,   # sliding mode controller order
 
-                    'rg_noise':1/5000,
-                    'rg_bias':0.001,
+                    'rg_noise':1/5000, # gaussian sensor noise for rate gyro (rad/s)
+                    'rg_bias':0.001,   # bias in rate gyro measurements (rad/s)
 
-                    'st_noise':1/5000,
+                    'st_noise':1/5000, # star tracker sensor noise (quaternion error)
                     
-                    'mg_noise':10**-11,
+                    'mg_noise':10**-11, # magnetometer sensor noise (T)
                     
-                    'gps_noise_r':0.01,
-                    'gps_noise_v':0.01,
+                    'gps_noise_r':0.01, # innacuracy in gps position (km)
+                    'gps_noise_v':0.01, # innacuracy in gps velocity (km/s)
 
-                    'gs_range':800*10**3,
+                    'gs_range':800*10**3, # minimum ground station distance for downlink (m)
 
+                    # ````````````````````````````````````````
+                    # defualts for transfer law
+                    'Wp':1,             # p-gain for Q-Law
+                    'rp_min':(400000 + 6378.1) * 10**3, # minimum periapsis for Q-Law
+
+                    'f_mag':330 * 10**-6, # magnitude of thruster (N)
+
+                    'Wa':10,    # semimajor axis gain for Q-Law
+                    'We':10,    # eccentriciy gain for Q-Law
+                    'Wi':1,     # inclanation gain for Q-Law
+                    'Wraan':0,  # RAAN gain for Q-Law
+                    'Wargp':0,  # arguement of periapsis gain for Q-Law
+
+                    'aT':(530 + 6378.1)*10**3, # target semimajor axis (m)
+                    'eT':0.001,                # target eccentricity (unitless)
+                    'iT':51.9 * np.pi/180,     # target inclination (radian)
+                    'raanT':0,                 # target RAAN (radian)
+                    'argpT':0,                 # target argument of periapsis (radian)
+                    
+                    'aT_accuracy':0.0001,      # semimajor axis target threshold (%)
+                    'iT_accuracy':0.00001,     # inclination target threshold (%)
+                    'eT_accuracy':0.0001,      # eccentriciy target threshold (%)
+                    
+                    'wakeup_time':2 * (24*3600) / dt,   # time spent in bootup
+                    'hold_1_window':2 * (24*3600) / dt, # time spent at hold 1 target
+                    'hold_2_window':2 * (24*3600) / dt, # time spent at hold 2 target
                     }
         
         self._p = defaults

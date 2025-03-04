@@ -67,7 +67,7 @@ class schedulerApp():
                         # ````````````````````````````````````````
                         # defualts for transfer law
                         'Wp':1,             # p-gain for Q-Law
-                        'rp_min':(400000 + 6378.1) * 10**3, # minimum periapsis for Q-Law
+                        'rp_min':(400 + 6378.1)*10**3, # minimum periapsis for Q-Law
 
                         'f_mag':330 * 10**-6, # magnitude of thruster (N)
 
@@ -311,8 +311,8 @@ class schedulerApp():
             gvec_local = [r_mag[0]*gvec[0] + v_mag[0]*gvec[1] + h_mag[0]*gvec[2],
                           r_mag[1]*gvec[0] + v_mag[1]*gvec[1] + h_mag[1]*gvec[2],
                           r_mag[2]*gvec[0] + v_mag[2]*gvec[1] + h_mag[2]*gvec[2]]
-        
-            self.setpoint = qm.axis_to_quaternion(np.array(gvec_local), 0)
+
+            self.setpoint = qm.axis_to_quaternion(gvec_local, np.pi)
             self.q_dot = q_dot
         
         elif 'hold' in self.mode:
@@ -352,8 +352,9 @@ class schedulerApp():
                                                         self.m.measurements['quaternion'], self.setpoint, 
                                                         self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
             
-            if qm.magnitude([ q_error[0], q_error[1], q_error[2] ]) < 0.001:
-                thruster_command = self._p['f_mag']
+            if qm.magnitude([ q_error[0], q_error[1], q_error[2] ]) < 0.0005:
+                if self.q_dot < 0:
+                    thruster_command = self._p['f_mag']
 
         
         self._write_command_to_thruster(thruster_command)

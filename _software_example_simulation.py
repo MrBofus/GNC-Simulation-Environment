@@ -218,7 +218,7 @@ while t < simTime:
 
 
     # append variables to dataframe to monitor results
-    df = gnc.appendDataFrame(df, state, t, scheduler.q_error, reactionWheelAssembly)
+    df = gnc.appendDataFrame(df, state, t, scheduler, scheduler.q_error, reactionWheelAssembly)
     
     # update user about simulation status
     if counter%1000 == 0:

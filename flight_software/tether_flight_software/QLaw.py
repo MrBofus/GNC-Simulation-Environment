@@ -4,9 +4,13 @@ from astropy import units as u
 import numpy as np
 
 
-def solveQLaw(orbit, Wp, rp_min, f_mag,
-              Wa, We, Wi, Wraan, Wargp,
-              aT, eT, iT, raanT, argpT):
+def solveQLaw(orbit, params):
+    
+    Wp, rp_min, f_mag, \
+    Wa, We, Wi, Wraan, Wargp, \
+    aT, eT, iT, raanT, argpT = params['Wp'], params['rp_min'], params['f_mag'], \
+                                    params['Wa'], params['We'], params['Wi'], params['Wraan'], params['Wargp'], \
+                                    params['aT'], params['eT'], params['iT'], params['raanT'], params['argpT']
     
     dxx_dtheta, dxx_dr, dxx_dh = return_oe_partials(orbit)
     dQ_da, dQ_de, dQ_di, dQ_draan, dQ_dargp = return_Q_partials(orbit, Wp, rp_min, f_mag,

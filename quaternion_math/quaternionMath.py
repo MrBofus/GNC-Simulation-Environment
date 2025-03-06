@@ -1,6 +1,5 @@
 import numpy as np
 import numba as nb
-from scipy.spatial.transform import Rotation as R
 
 @nb.jit(nopython=True)
 def magnitude(vec):
@@ -83,10 +82,13 @@ def axis_to_quaternion(axis, rotation):
                                  axis[2]*np.sin(rotation/2),
                                  np.cos(rotation/2) ]) )
 
-
+@nb.jit(nopython=True)
 def quaternion_to_axis(quaternion):
-    rotation = R.from_quat(quaternion)
-    return rotation.apply([0, 0, 1])
+    theta = 2*np.arccos(quaternion[3])
+    return normalize( np.array([quaternion[0], 
+                                quaternion[1], 
+                                quaternion[2]]) / np.sin(theta/2) )
+
 
 @nb.jit(nopython=True)
 def dcm_to_quaternion(dcm):

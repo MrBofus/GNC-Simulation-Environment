@@ -5,63 +5,34 @@ import numpy as np
 
 
 
-def sign(val):
-    if val == 0: return 0
-    elif val < 0: return -1
-    else: return 1
+class slidingModeController():
+    def __init__(self, kp, kd, window):
+        self.kp = kp
+        self.kd = kd
+        self.window = window
+        self.order = 3
 
-
-def p2controller(angularRate, quaternion, setpoint, kp, kd):
-    # https://ltu.diva-portal.org/smash/get/diva2:1010947/FULLTEXT01.
-    
-    quaternion_error = qm.quaternionDifference(quaternion, setpoint)
+    def run(self, q_setpoint, w_setpoint, measurements):
+        if q_setpoint[0] == -1 and q_setpoint[1] == -1 and q_setpoint[2] == -1:
+            return [0, 0, 0, 1], np.array([0, 0, 0])
         
-    controlTorque = []
-    for i in range(3):
-        u = ( kp * quaternion_error[i] * sign(quaternion_error[3]) ) + ( kd * angularRate[i] )
-        controlTorque.append(u)
+        q = np.array(measurements['quaternion'])
+        w = np.array(measurements['angularRate'])
 
-    return quaternion_error, np.array( controlTorque )
+        q_error = qm.quaternionDifference(q, q_setpoint)
+        w_error = w - w_setpoint
 
-
-def slidingModeController(angularRate, quaternion, setpoint,
-                            kp, kd, sigma, order):
-    if setpoint[0] == -1 and setpoint[1] == -1 and setpoint[2] == -1:
-        return [0, 0, 0, 1], np.array([0, 0, 0])
-    
-    quaternion_error = qm.quaternionDifference(quaternion, setpoint)
+        # s = (w - w_setpoint) + self.lambd * q_error_vec * np.sign(q_error[3])
         
-    controlTorque = []
-    for i in range(3):
-        if abs(quaternion_error[i]) >= sigma:
-            u = kp * (quaternion_error[i] ** order) * sign(quaternion_error[3]) + kd * angularRate[i]
-        
-        else:
-            u = kp * quaternion_error[i] * sign(quaternion_error[3]) + kd * angularRate[i]
-            
-        controlTorque.append(u)
+        u = []
+        for i in range(3):
+            if abs(q_error[i]) >= self.window:
+                u_ = self.kp * (q_error[i] ** 3) * np.sign(q_error[3]) + self.kd * w_error[i]
+            else:
+                u_ = self.kp * q_error[i] * np.sign(q_error[3]) + self.kd * w_error[i]
+            u.append(u_)
 
-    return quaternion_error, np.array( controlTorque )
-
-
-def magneticController(angularRate, quaternion, setpoint,
-                            kp, kd, sigma, order, magnetic_field):
-    if setpoint == [-1, -1, -1, -1]:
-        return [0, 0, 0, 1], np.array([0, 0, 0])
-    
-    quaternion_error = qm.quaternionDifference(quaternion, setpoint)
-
-    I = qm.normalize([0.00625, 0.00625, 0.0025])
-    controlInput = []
-    for i in range(3):
-
-        u = -kp * quaternion_error[i] + \
-            -kd * angularRate[i]
-        
-        controlInput.append(u)
-
-    controlTorque = np.cross(controlInput, qm.normalize(magnetic_field))
-    return quaternion_error, controlTorque
+        return q_error, np.array(u)
 
 
 def bDotController(angularRate, bField, gain):

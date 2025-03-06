@@ -47,10 +47,10 @@ class schedulerApp():
                         # defualts for sensors
                         'bDot_gain':0.1, # gain for the b-dot controller for detumble
                 
-                        'smc_kp':1.0,    # p-gain for the sliding-mode controller, for pointing with wheels
-                        'smc_kd':10.0,   # d-gain for the sliding-mode controller, for pointing with wheels
-                        'smc_sigma':0.1, # window for sliging mode controller
-                        'smc_order':3,   # sliding mode controller order
+                        'smc_kp':1.0,     # p-gain for the sliding-mode controller, for pointing with wheels
+                        'smc_kd':10.0,    # d-gain for the sliding-mode controller, for pointing with wheels
+                        'smc_window':0.1, # window for sliging mode controller
+                        'smc_order':3,    # sliding mode controller order
 
                         'rg_noise':1/5000, # gaussian sensor noise for rate gyro (rad/s)
                         'rg_bias':0.001,   # bias in rate gyro measurements (rad/s)
@@ -133,11 +133,8 @@ class schedulerApp():
         self.thruster_command = command
 
     # write variables to system state
-    def _write_variables_to_state(self, mode, q_error):
-        if not mode == None:
-            self.mode = mode
-        if not q_error == None:
-            self.q_error = q_error
+    def _write_variables_to_state(self, mode):
+        self.mode = mode
     
 
     # ``````````````````````````````````````````````````````````````````````````````````````````````
@@ -154,6 +151,9 @@ class schedulerApp():
         if self.systemClock == 1:
             self.mode = 'init'
             self.q_error = [1, 1, 1, 1]
+            self.t_to_hold_accuracy = 0
+
+            self.smc = slidingModeController(self._p['smc_kp'], self._p['smc_kd'], self._p['smc_window'])
         
         # run guidance, navigation, and control
         self._run_navigation() # determine physical state
@@ -186,7 +186,7 @@ class schedulerApp():
         # proceeding to detumble mode
         if self.mode == 'init':
             if self.systemClock > self._p['wakeup_time']:
-                self._write_variables_to_state('detumble', None)
+                self._write_variables_to_state('detumble')
             else:
                 pass
         
@@ -200,7 +200,7 @@ class schedulerApp():
                 printout('detumbled, entering parking orbit...')
 
                 # update the mode
-                self._write_variables_to_state('parking_orbit', None)
+                self._write_variables_to_state('parking_orbit')
                 # mark the time of detumble
                 self.t_crit = self.systemClock
             else:
@@ -214,7 +214,7 @@ class schedulerApp():
                 printout('hold complete, entering transfer 1...')
 
                 # update the mode
-                self._write_variables_to_state('transfer_1', None)
+                self._write_variables_to_state('transfer_1')
             else:
                 pass
 
@@ -226,7 +226,7 @@ class schedulerApp():
                 printout('transfer 1 complete, holding...')
 
                 # update the mode
-                self._write_variables_to_state('hold_1', None)
+                self._write_variables_to_state('hold_1')
                 # mark the time of orbit transfer
                 self.t_crit = self.systemClock
             else:
@@ -238,14 +238,13 @@ class schedulerApp():
             # check how long spacecraft has held in orbit and 
             # once timeout is reached, initiate next transfer
             if self.systemClock > self.t_crit + self._p['hold_1_window']:
-                self._write_variables_to_state('exit', None) ##################################
                 printout('hold complete, beginning transfer 2...')
 
                 # update user variables to define the next transfer
                 self._update_user_variables(aT=self._p['aT'] + 120*10**3, 
                                             iT=self._p['iT'] + 0.1*np.pi/180)
                 # update the mode
-                self._write_variables_to_state('transfer_2', None)
+                self._write_variables_to_state('transfer_2')
             else:
                 pass
         
@@ -257,7 +256,7 @@ class schedulerApp():
                 printout('transfer 2 complete, holding...')
 
                 # update the mode
-                self._write_variables_to_state('hold_2', None)
+                self._write_variables_to_state('hold_2')
                 # mark the time of orbit transfer
                 self.t_crit = self.systemClock
             else:
@@ -270,7 +269,7 @@ class schedulerApp():
             # once timeout is reached, initiate next transfer
             if self.systemClock > self.t_crit + self._p['hold_2_window']:
                 # exit simulation
-                self._write_variables_to_state('exit', None)
+                self._write_variables_to_state('exit')
             else:
                 pass
 
@@ -282,7 +281,9 @@ class schedulerApp():
         qvec = st.pull_star_tracker(self.state, noise=self._p['st_noise'])
         bvec = mm.pull_magnetometer(self.state, noise=self._p['mg_noise'])
 
-        rvec, vvec = gps.pull_gps(self.state, r_noise=self._p['gps_noise_r'], v_noise=self._p['gps_noise_v'])
+        rvec, vvec = gps.pull_gps(self.state, 
+                                  r_noise=self._p['gps_noise_r'], 
+                                  v_noise=self._p['gps_noise_v'])
         
         self.m.measurements.update(angularRate=wvec, quaternion=qvec, 
                                     bField=bvec, rvec=rvec, vvec=vvec)
@@ -300,9 +301,7 @@ class schedulerApp():
             self.q_dot = 0
         
         elif 'transfer' in self.mode:
-            gvec, q_dot = solveQLaw(self.state.orbit, self._p['Wp'], self._p['rp_min'], self._p['f_mag'],
-                                    self._p['Wa'], self._p['We'], self._p['Wi'], self._p['Wraan'], self._p['Wargp'],
-                                    self._p['aT'], self._p['eT'], self._p['iT'], self._p['raanT'], self._p['argpT'])
+            gvec, q_dot = solveQLaw(self.state.orbit, self._p)
         
             r_mag = qm.normalize(self.m.measurements['rvec'])
             v_mag = qm.normalize(self.m.measurements['vvec'])
@@ -323,42 +322,35 @@ class schedulerApp():
     # based on physical state of spacecraft and the mode, send commands
     # to the attitue actuators and thruster
     def _run_control(self):
-        
-        '''
-        elif self.mode == 'transfer_1':
-            if (self.state.orbit.nu << u.deg).value > 0 and (self.state.orbit.nu << u.deg).value < 180:
-                if self.err < 0:
-                    self._write_command_to_thruster(self._p['f_mag']*self.setpoint)
-        '''
-
         thruster_command = 0
         rw_command = [0, 0, 0]
         mt_command = [0, 0, 0]
-        q_error = [0, 0, 0, 1]
+        self.q_error = np.array([0, 0, 0, 1])
         
 
         if self.mode == 'detumble':
-            mt_command = bDotController(self.m.measurements['angularRate'], self.m.measurements['bField'], self._p['bDot_gain'])
+            mt_command = bDotController(self.m.measurements['angularRate'], 
+                                        self.m.measurements['bField'], 
+                                        self._p['bDot_gain'])
 
 
         elif self.mode == 'parking_orbit' or 'hold' in self.mode:
-            q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
-                                                        self.m.measurements['quaternion'], self.setpoint, 
-                                                        self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
+            self.q_error, rw_command = self.smc.run(self.setpoint, np.array([0, 0, 0]), 
+                                                    self.m.measurements)
         
 
         elif 'transfer' in self.mode:
-            q_error, rw_command = slidingModeController(self.m.measurements['angularRate'], 
-                                                        self.m.measurements['quaternion'], self.setpoint, 
-                                                        self._p['smc_kp'], self._p['smc_kd'], self._p['smc_sigma'], self._p['smc_order'])
+            self.q_error, rw_command = self.smc.run(self.setpoint, np.array([0, 0, 0]), 
+                                                    self.m.measurements)
             
-            if qm.magnitude([ q_error[0], q_error[1], q_error[2] ]) < 0.0005:
-                if self.q_dot < 0:
+            if qm.magnitude(self.q_error[:3]) < 0.0005:
+                self.t_to_hold_accuracy += 1
+                if self.q_dot < 0 and self.t_to_hold_accuracy > 5:
                     thruster_command = self._p['f_mag']
+            else:
+                self.t_to_hold_accuracy = 0
 
         
         self._write_command_to_thruster(thruster_command)
         self._write_command_to_magnetorquer(mt_command)
         self._write_command_to_reactionWheel(rw_command)
-
-        self._write_variables_to_state(None, q_error)

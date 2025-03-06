@@ -100,7 +100,7 @@ physicsHz = 20             # Hz
 flightSoftwareHz = 5      # Hz
 
 # total simulation time
-simTime = 30*24*3600   # s
+simTime = 2*5400   # s
 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
@@ -143,7 +143,7 @@ magnetorquerAssembly = gnc.magnetorquerAssembly(n_turns, length, width, max_curr
 #
 # https://www.enpulsion.com/order/enpulsion-nano/
 
-thrust_magnitude = 330 * 10**-6 # N
+thrust_magnitude = 330 * 10**-6 # N   # noramlly 10**-6
 propellant_mass = 220 * 10**-3  # kg
 
 power_consumption_idle = 8      # W
@@ -170,9 +170,11 @@ t = 0
 # begin flight software and update user variables if any
 
 scheduler = fs.schedulerApp()
-scheduler._update_user_variables(bDot_gain=10**5, smc_kp=0.003, smc_kd=0.015, gs_range=0,
+scheduler._update_user_variables(bDot_gain=10**5, smc_kp=0.003, smc_kd=0.015,
+                                 f_mag = thrust_magnitude, aT=(420+6378.1)*10**3, iT=i * np.pi/180,
+                                 aT_accuracy=0.01, iT_accuracy=0.001, eT_accuracy=0.001,
                                  rg_noise=0, rg_bias=0, st_noise=0, mg_noise=0, gps_noise_r=0, gps_noise_v=0)
-
+ 
 
 # `````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````` #
 # begin simulation
@@ -212,8 +214,7 @@ while t < simTime:
     # consolidate physical influences
     controlTorque = copy.deepcopy(reactionWheelAssembly.wheel_torques) + copy.deepcopy(magnetorquerAssembly.torque)
     # determine thrust
-    if scheduler.thruster_command > 0:
-        thrust = scheduler.thruster_command * np.array([scheduler.setpoint[0], scheduler.setpoint[1], scheduler.setpoint[2]]) # qm.quaternion_to_axis(state.quaternion)
+    thrust = scheduler.thruster_command * np.array( qm.quaternion_to_axis(state.quaternion) )
 
 
     # append variables to dataframe to monitor results
@@ -221,7 +222,7 @@ while t < simTime:
     
     # update user about simulation status
     if counter%1000 == 0: print('\r', str(int(100*t/simTime)) + '% complete -- (w is ' + str(round(qm.magnitude(state.angularRate), 4)) + 
-                                ', a is ' + str(state.orbit.a.value) + ')        ' , end='')
+                                ', a is ' + str(round(state.orbit.a.value-6378.1, 3)) + ')        ' , end='')
 
     # advance counter and simulation time
     counter += 1

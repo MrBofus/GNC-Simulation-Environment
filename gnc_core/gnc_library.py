@@ -101,7 +101,7 @@ class satelliteState():
         self.B_body = qm.magnitude(B_true) * np.array([ B_body[0], B_body[1], B_body[2] ])
 
     
-    def propagatePosition(self,  controlForce, disturbanceForce, dt):
+    def propagatePosition(self, controlForce, disturbanceForce, dt):
         self.t += dt
         
         self.controlForce = controlForce
@@ -356,8 +356,8 @@ def plot_orbit_transfer(df):
     
     # generate plots for user
     ax[0, 0].set_title('semimajor axis vs. time')
-    ax[0, 0].plot(df['time'], df['aT']-6371.8, 'k-', label='target semimajor axis (agl)')
-    ax[0, 0].plot(df['time'], df['a']-6371.8, label='semimajor axis (agl)')
+    ax[0, 0].plot(df['time'], df['aT']-6378.1, 'k-', label='target semimajor axis (agl)')
+    ax[0, 0].plot(df['time'], df['a']-6378.1, label='semimajor axis (agl)')
     ax[0, 0].set_xlabel('time (s)')
     ax[0, 0].set_ylabel('semimajor axis (agl, km)')
     ax[0, 0].legend()
